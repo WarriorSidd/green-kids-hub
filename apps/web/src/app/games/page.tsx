@@ -1,17 +1,44 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
-import { categories, games as initialGames, groups } from '@/lib/catalog';
+import { games as initialGames, groups } from '@/lib/catalog-data';
+import { categories } from '@/lib/catalog';
 import { IconLock, IconPlay, IconStar } from '@/components/Icons';
+import { getStoredUser, isGameUnlocked, UserSession } from '@/lib/api';
 
 export default function GamesPage() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [user, setUser] = useState<UserSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredGames = initialGames.filter((game) => {
+  useEffect(() => {
+    setUser(getStoredUser());
+    setIsLoading(false);
+  }, []);
+
+  if (isLoading) return <AppShell><div className="p-8 font-medium">Loading...</div></AppShell>;
+  
+  if (!user) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center rounded-2xl bg-white p-12 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-2xl font-black text-ink">Please log in to play games.</h2>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const isStudent = user.role === 'STUDENT';
+  
+  const availableGames = isStudent && user.group
+    ? initialGames.filter(g => g.group === user.group)
+    : initialGames;
+
+  const filteredGames = availableGames.filter((game) => {
     const matchesGroup = !selectedGroup || game.group === selectedGroup;
     const matchesCategory = !selectedCategory || game.category === selectedCategory;
     const matchesSearch =
@@ -24,6 +51,12 @@ export default function GamesPage() {
   return (
     <AppShell>
       <div className="grid gap-6">
+        {isStudent && user.group && (
+          <div className="rounded-xl bg-emerald-100 p-4 text-emerald-800 ring-1 ring-emerald-200">
+            <p className="font-bold">Welcome! You belong to {user.group}. Showing games for your level.</p>
+          </div>
+        )}
+
         {/* Header & Filter Controls */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
@@ -107,57 +140,62 @@ export default function GamesPage() {
 
         {/* Game Cards Grid */}
         <section className="grid gap-4 lg:grid-cols-2">
-          {filteredGames.map((game) => (
-            <article
-              key={game.id}
-              className="flex flex-col justify-between rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 hover:shadow-md transition"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className="inline-block rounded-md bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-800">
-                      {game.group} · {game.category}
+          {filteredGames.map((game) => {
+            const unlocked = !isStudent || isGameUnlocked(user.classLevel, game.id);
+            const statusLabel = unlocked ? 'Unlocked' : 'Locked';
+
+            return (
+              <article
+                key={game.id}
+                className="flex flex-col justify-between rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 hover:shadow-md transition"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="inline-block rounded-md bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-800">
+                        {game.group} · {game.category}
+                      </span>
+                      <h3 className="mt-2 text-xl font-black text-ink">{game.title}</h3>
+                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-black text-amber-800">
+                      <IconStar className="size-3.5 fill-amber-500 text-amber-500" /> {game.stars}/3
                     </span>
-                    <h3 className="mt-2 text-xl font-black text-ink">{game.title}</h3>
                   </div>
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-black text-amber-800">
-                    <IconStar className="size-3.5 fill-amber-500 text-amber-500" /> {game.stars}/3
-                  </span>
+                  <p className="mt-2 text-xs font-medium text-slate-600 leading-relaxed">
+                    {game.description}
+                  </p>
                 </div>
-                <p className="mt-2 text-xs font-medium text-slate-600 leading-relaxed">
-                  {game.description}
-                </p>
-              </div>
 
-              <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold ${
-                    game.status === 'Locked'
-                      ? 'bg-slate-100 text-slate-500'
-                      : 'bg-emerald-100 text-emerald-800'
-                  }`}
-                >
-                  {game.status}
-                </span>
+                <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold ${
+                      !unlocked
+                        ? 'bg-slate-100 text-slate-500'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}
+                  >
+                    {statusLabel}
+                  </span>
 
-                {game.status === 'Locked' ? (
-                  <button
-                    disabled
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-slate-200 px-4 py-2 text-xs font-black text-slate-500 cursor-not-allowed"
-                  >
-                    <IconLock className="size-3.5" /> Locked
-                  </button>
-                ) : (
-                  <Link
-                    href={`/games/${game.id}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-leaf px-4 py-2 text-xs font-black text-white shadow-soft transition hover:bg-emerald-600"
-                  >
-                    <IconPlay className="size-3.5" /> Play Now
-                  </Link>
-                )}
-              </div>
-            </article>
-          ))}
+                  {!unlocked ? (
+                    <button
+                      disabled
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-slate-200 px-4 py-2 text-xs font-black text-slate-500 cursor-not-allowed"
+                    >
+                      <IconLock className="size-3.5" /> Locked
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/games/${game.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-leaf px-4 py-2 text-xs font-black text-white shadow-soft transition hover:bg-emerald-600"
+                    >
+                      <IconPlay className="size-3.5" /> Play Now
+                    </Link>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </section>
       </div>
     </AppShell>

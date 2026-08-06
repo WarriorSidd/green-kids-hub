@@ -26,12 +26,11 @@ Default local URLs:
 - Web: `http://localhost:3000`
 - API: `http://localhost:4000/api`
 
-## Demo Accounts After Seeding
+## Authentication
 
-- Super Admin: `superadmin@greenkidshub.com` / `ChangeMe123!`
-- Admin: `admin@greenkidshub.com` / `ChangeMe123!`
-- Teacher: `teacher@greenkidshub.com` / `ChangeMe123!`
-- Student: `student@greenkidshub.com` / `ChangeMe123!`
+Default accounts are created during database seeding. Credentials are managed securely by the system administrator. Contact your organization's Super Admin for account credentials.
+
+Roles supported: **Super Admin**, **Admin**, **Teacher**, **Student**.
 
 ## Production Targets
 

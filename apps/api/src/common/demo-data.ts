@@ -1,7 +1,7 @@
 import { GameStatus, GameType, HomeworkStatus, LearningGroup, RoleKey } from '@prisma/client';
 import { permissions } from '../rbac/permissions';
 
-export const demoPassword = 'ChangeMe123!';
+export const demoPassword = process.env.SEED_PASSWORD || 'SetViaSeedEnvVar';
 
 export const demoRoles: Record<RoleKey, string[]> = {
   SUPER_ADMIN: Object.values(permissions),

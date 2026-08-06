@@ -1,109 +1,210 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { getStoredUser, UserSession } from '@/lib/api';
-import { IconBell, IconGraduationCap, IconLogIn, IconUserCheck } from '@/components/Icons';
+import { getStoredUser, clearStoredUser, UserSession, isSessionValid } from '@/lib/api';
+import { IconLogIn, IconGamepad, IconAward, IconBarChart, IconClose, IconGraduationCap } from '@/components/Icons';
 
-const LoginModal = dynamic(() => import('@/components/LoginModal').then((m) => m.LoginModal), {
-  ssr: false
-});
-
-const nav = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/games', label: 'Games' }
-] as const;
+const LoginModal = dynamic(() => import('@/components/LoginModal'), { ssr: false });
+const ToastProvider = dynamic(() => import('@/components/Toast').then((m) => m.ToastProvider), { ssr: false });
 
 export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
   const [user, setUser] = useState<UserSession | null>(null);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    setUser(getStoredUser());
-
-    const handleAuthChange = () => {
-      setUser(getStoredUser());
+    const checkSession = () => {
+      if (isSessionValid()) {
+        setUser(getStoredUser());
+      } else {
+        setUser(null);
+      }
     };
 
+    checkSession();
+
+    const handleAuthChange = () => checkSession();
     window.addEventListener('gkh_auth_change', handleAuthChange);
     return () => window.removeEventListener('gkh_auth_change', handleAuthChange);
   }, []);
 
-  const getRoleTone = (role?: string) => {
-    switch (role) {
-      case 'SUPER_ADMIN':
-        return 'bg-purple-100 text-purple-900 border-purple-200';
-      case 'ADMIN':
-        return 'bg-blue-100 text-blue-900 border-blue-200';
-      case 'TEACHER':
-        return 'bg-emerald-100 text-emerald-900 border-emerald-200';
-      default:
-        return 'bg-amber-100 text-amber-900 border-amber-200';
-    }
+  const handleSignOut = () => {
+    clearStoredUser();
+    setUser(null);
   };
 
+  const navItems = [
+    { name: 'Dashboard', href: '/dashboard', icon: IconBarChart },
+    { name: 'Games', href: '/games', icon: IconGamepad },
+    { name: 'Leaderboard', href: '/leaderboard', icon: IconAward },
+  ];
+
   return (
-    <main className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-lg bg-leaf text-white shadow-soft">
-              <IconGraduationCap className="size-6" />
-            </span>
-            <span>
-              <span className="block text-lg font-black text-ink">Green Kids Hub</span>
-              <span className="block text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                Learning Portal
-              </span>
-            </span>
-          </Link>
-
-          <nav className="hidden items-center gap-2 rounded-lg bg-emerald-50 p-1 sm:flex">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-md px-4 py-2 text-sm font-bold text-emerald-900 hover:bg-white"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-3">
-            {user && (
-              <div
-                className={`hidden md:flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-black ${getRoleTone(
-                  user.role
-                )}`}
-              >
-                <IconUserCheck className="size-4" />
-                <span>{user.displayName}</span>
+    <ToastProvider>
+      <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-ink">
+        <header className="sticky top-0 z-40 w-full backdrop-blur bg-white/90 border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              {/* Logo */}
+              <div className="flex-shrink-0 flex items-center">
+                <Link href="/" className="flex items-center gap-2 group">
+                  <div className="bg-leaf p-2 rounded-xl group-hover:scale-105 transition-transform shadow-soft">
+                    <IconGraduationCap className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="font-bold text-xl tracking-tight text-emerald-800">Green Kids Hub</span>
+                </Link>
               </div>
-            )}
 
-            <button
-              onClick={() => setIsLoginOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-3.5 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-900"
-            >
-              <IconLogIn className="size-4" />
-              <span>Switch Role</span>
-            </button>
+              {/* Desktop Navigation */}
+              <nav className="hidden md:flex items-center gap-8">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-emerald-700 transition-colors"
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.name}
+                  </Link>
+                ))}
+              </nav>
 
-            <button
-              aria-label="Notifications"
-              className="grid size-10 place-items-center rounded-lg bg-white text-ink shadow-sm ring-1 ring-slate-200"
-            >
-              <IconBell className="size-4" />
-            </button>
+              {/* User Actions */}
+              <div className="hidden md:flex items-center gap-4">
+                {user ? (
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm font-semibold text-slate-900">{user.displayName}</span>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 capitalize">
+                        {user.role}
+                      </span>
+                    </div>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm ${user.role === 'TEACHER' ? 'bg-indigo-500' : 'bg-sun text-slate-900'}`}>
+                      {user.avatar ? (
+                        <img src={user.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        user.displayName.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <button
+                      onClick={handleSignOut}
+                      className="text-sm font-medium text-slate-500 hover:text-red-600 transition-colors ml-2"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="flex items-center gap-2 bg-leaf hover:bg-emerald-600 text-white px-5 py-2 rounded-full font-medium transition-colors shadow-soft"
+                  >
+                    <IconLogIn className="w-4 h-4" />
+                    Sign In
+                  </button>
+                )}
+              </div>
+
+              {/* Mobile menu button */}
+              <div className="flex items-center md:hidden">
+                <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="p-2 rounded-md text-slate-400 hover:text-slate-500 hover:bg-slate-100 focus:outline-none"
+                >
+                  <span className="sr-only">Open main menu</span>
+                  {isMobileMenuOpen ? (
+                    <IconClose className="block h-6 w-6" />
+                  ) : (
+                    <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </header>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</div>
+          {/* Mobile menu */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden border-t border-slate-200 bg-white">
+              <div className="pt-2 pb-3 space-y-1">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="flex items-center gap-3 px-4 py-3 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-emerald-700"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <item.icon className="w-5 h-5 text-slate-400" />
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+              <div className="pt-4 pb-4 border-t border-slate-200">
+                {user ? (
+                  <div className="flex items-center justify-between px-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm ${user.role === 'TEACHER' ? 'bg-indigo-500' : 'bg-sun text-slate-900'}`}>
+                        {user.avatar ? (
+                          <img src={user.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          user.displayName.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-base font-medium text-slate-800">{user.displayName}</div>
+                        <div className="text-sm font-medium text-emerald-600 capitalize">{user.role}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        handleSignOut();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="text-sm font-medium text-slate-500 hover:text-red-600"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <div className="px-4">
+                    <button
+                      onClick={() => {
+                        setIsLoginModalOpen(true);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="flex w-full justify-center items-center gap-2 bg-leaf hover:bg-emerald-600 text-white px-5 py-3 rounded-xl font-medium transition-colors shadow-soft"
+                    >
+                      <IconLogIn className="w-5 h-5" />
+                      Sign In
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </header>
 
-      {isLoginOpen && <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />}
-    </main>
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {children}
+        </main>
+
+        <footer className="bg-white border-t border-slate-200 mt-auto py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-slate-500">
+            <p>© {new Date().getFullYear()} Green Kids Hub. All rights reserved.</p>
+          </div>
+        </footer>
+
+        {isLoginModalOpen && (
+          <LoginModal isOpen={isLoginModalOpen} onClose={() => {
+            setIsLoginModalOpen(false);
+            if (isSessionValid()) {
+              setUser(getStoredUser());
+            }
+          }} />
+        )}
+      </div>
+    </ToastProvider>
   );
 }

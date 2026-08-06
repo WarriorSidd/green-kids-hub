@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { games, Game } from '@/lib/catalog-data';
+import { saveGameScore, getStoredUser } from '@/lib/api';
 
 export interface QuizQuestion {
   id: string;
@@ -790,6 +791,22 @@ export const GameEngine: React.FC<GameEngineProps> = ({ gameId, game: customGame
     setMoves(totalMoves);
     setIsPlaying(false);
     setIsCompleted(true);
+
+    // Persist score to storage
+    const currentUser = getStoredUser();
+    if (currentUser && currentUser.role === 'STUDENT') {
+      const stars = finalScore >= 100 || seconds < 30 ? 3 : finalScore >= 50 || seconds < 60 ? 2 : 1;
+      const accuracy = totalMoves > 0 ? Math.round((finalScore / (totalMoves * 25)) * 100) : 0;
+      saveGameScore(
+        currentUser.id,
+        activeGame.id,
+        activeGame.title,
+        finalScore,
+        stars,
+        seconds,
+        accuracy
+      );
+    }
   };
 
   const calculateStars = () => {
@@ -918,6 +935,11 @@ export const GameEngine: React.FC<GameEngineProps> = ({ gameId, game: customGame
               <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 text-sm font-bold text-slate-700">
                 <div>Score: {score} pts</div>
                 <div>Time: {seconds}s</div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-emerald-50 p-2 text-xs font-black text-emerald-700">
+                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                Score Saved to Your Profile!
               </div>
 
               <div className="mt-6 flex gap-3">
