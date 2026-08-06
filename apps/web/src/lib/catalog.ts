@@ -1,17 +1,10 @@
 import {
-  Award,
-  BarChart3,
-  BookOpen,
-  Brain,
-  Calculator,
-  Code2,
-  Eye,
-  Gamepad2,
-  HeartHandshake,
-  Lightbulb,
-  Palette,
-  Sparkles
-} from 'lucide-react';
+  IconAward,
+  IconBarChart,
+  IconBookCheck,
+  IconGamepad,
+  IconStar
+} from '@/components/Icons';
 
 export interface Game {
   id: string;
@@ -32,18 +25,18 @@ export const groups = [
 ];
 
 export const categories = [
-  { name: 'English', icon: BookOpen, color: 'bg-sky-100 text-sky-700' },
-  { name: 'Mathematics', icon: Calculator, color: 'bg-yellow-100 text-yellow-700' },
-  { name: 'Science', icon: Sparkles, color: 'bg-emerald-100 text-emerald-700' },
-  { name: 'General Knowledge', icon: Award, color: 'bg-orange-100 text-orange-700' },
-  { name: 'Brain Development', icon: Brain, color: 'bg-pink-100 text-pink-700' },
-  { name: 'Logic Development', icon: Lightbulb, color: 'bg-violet-100 text-violet-700' },
-  { name: 'Coding Basics', icon: Code2, color: 'bg-cyan-100 text-cyan-700' },
-  { name: 'Creativity', icon: Palette, color: 'bg-rose-100 text-rose-700' },
-  { name: 'Emotional Intelligence', icon: HeartHandshake, color: 'bg-lime-100 text-lime-700' },
-  { name: 'Memory Improvement', icon: Eye, color: 'bg-indigo-100 text-indigo-700' },
-  { name: 'Focus & Concentration', icon: Gamepad2, color: 'bg-teal-100 text-teal-700' },
-  { name: 'Problem Solving', icon: BarChart3, color: 'bg-amber-100 text-amber-700' }
+  { name: 'English', icon: IconBookCheck, color: 'bg-sky-100 text-sky-700' },
+  { name: 'Mathematics', icon: IconBarChart, color: 'bg-yellow-100 text-yellow-700' },
+  { name: 'Science', icon: IconStar, color: 'bg-emerald-100 text-emerald-700' },
+  { name: 'General Knowledge', icon: IconAward, color: 'bg-orange-100 text-orange-700' },
+  { name: 'Brain Development', icon: IconBarChart, color: 'bg-pink-100 text-pink-700' },
+  { name: 'Logic Development', icon: IconBarChart, color: 'bg-violet-100 text-violet-700' },
+  { name: 'Coding Basics', icon: IconBarChart, color: 'bg-cyan-100 text-cyan-700' },
+  { name: 'Creativity', icon: IconBarChart, color: 'bg-rose-100 text-rose-700' },
+  { name: 'Emotional Intelligence', icon: IconAward, color: 'bg-lime-100 text-lime-700' },
+  { name: 'Memory Improvement', icon: IconGamepad, color: 'bg-indigo-100 text-indigo-700' },
+  { name: 'Focus & Concentration', icon: IconGamepad, color: 'bg-teal-100 text-teal-700' },
+  { name: 'Problem Solving', icon: IconBarChart, color: 'bg-amber-100 text-amber-700' }
 ];
 
 export const games: Game[] = [

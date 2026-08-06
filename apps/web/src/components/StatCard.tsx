@@ -1,6 +1,16 @@
-import type { LucideIcon } from 'lucide-react';
+import React from 'react';
 
-export function StatCard({ label, value, icon: Icon, tone }: { label: string; value: string; icon: LucideIcon; tone: string }) {
+export function StatCard({
+  label,
+  value,
+  icon: Icon,
+  tone
+}: {
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  tone: string;
+}) {
   return (
     <section className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-200">
       <div className="flex items-center justify-between gap-3">
@@ -9,7 +19,7 @@ export function StatCard({ label, value, icon: Icon, tone }: { label: string; va
           <p className="mt-1 text-2xl font-black text-ink">{value}</p>
         </div>
         <span className={`grid size-12 place-items-center rounded-lg ${tone}`}>
-          <Icon size={24} />
+          <Icon className="size-6" />
         </span>
       </div>
     </section>

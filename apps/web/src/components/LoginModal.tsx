@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { DEMO_ACCOUNTS, setStoredUser, UserSession } from '@/lib/api';
-import { ShieldCheck, UserCheck, Key, X, Lock } from 'lucide-react';
+import { IconShieldCheck, IconUserCheck, IconKey, IconClose, IconLock } from '@/components/Icons';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -46,12 +46,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           onClick={onClose}
           className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
         >
-          <X size={20} />
+          <IconClose className="size-5" />
         </button>
 
         <div className="flex items-center gap-3">
           <div className="grid size-12 place-items-center rounded-xl bg-leaf text-white">
-            <ShieldCheck size={26} />
+            <IconShieldCheck className="size-6" />
           </div>
           <div>
             <h2 className="text-2xl font-black text-ink">Role Portal Login</h2>
@@ -76,7 +76,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                   <span className="block text-xs font-black text-emerald-900">{acc.role}</span>
                   <span className="block text-sm font-bold text-slate-800">{acc.displayName.split(' ')[0]}</span>
                 </div>
-                <UserCheck size={18} className="text-emerald-600" />
+                <IconUserCheck className="size-5 text-emerald-600" />
               </button>
             ))}
           </div>
@@ -92,7 +92,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           <div>
             <label className="block text-xs font-bold text-slate-700">Email Address</label>
             <div className="mt-1 flex items-center rounded-lg border border-slate-200 px-3 py-2">
-              <Key size={18} className="text-slate-400" />
+              <IconKey className="size-4 text-slate-400" />
               <input
                 type="email"
                 value={email}
@@ -106,7 +106,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           <div>
             <label className="block text-xs font-bold text-slate-700">Password</label>
             <div className="mt-1 flex items-center rounded-lg border border-slate-200 px-3 py-2">
-              <Lock size={18} className="text-slate-400" />
+              <IconLock className="size-4 text-slate-400" />
               <input
                 type="password"
                 value={password}

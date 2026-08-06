@@ -2,7 +2,12 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { AppShell } from '@/components/AppShell';
+
+const GameEngine = dynamic(() => import('@/components/GameEngine').then((m) => m.GameEngine), {
+  ssr: false
+});
 
 export default function GamePlayPage() {
   const params = useParams();
@@ -10,7 +15,7 @@ export default function GamePlayPage() {
 
   return (
     <AppShell>
-      <div>Game Play Page: {gameId}</div>
+      <GameEngine gameId={gameId} />
     </AppShell>
   );
 }

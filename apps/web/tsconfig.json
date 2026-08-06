@@ -4,6 +4,7 @@
     "jsx": "preserve",
     "allowJs": false,
     "noEmit": true,
+    "noUncheckedIndexedAccess": false,
     "plugins": [
       {
         "name": "next"

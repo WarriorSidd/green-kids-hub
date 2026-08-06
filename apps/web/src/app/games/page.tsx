@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { categories, games as initialGames, groups } from '@/lib/catalog';
-import { Lock, Play, Search, Star, Sparkles } from 'lucide-react';
+import { IconLock, IconPlay, IconStar } from '@/components/Icons';
 
 export default function GamesPage() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -38,7 +38,9 @@ export default function GamesPage() {
 
             {/* Search Input */}
             <div className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm">
-              <Search size={18} className="text-slate-400" />
+              <svg className="size-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               <input
                 type="text"
                 placeholder="Search games or skills..."
@@ -93,7 +95,7 @@ export default function GamesPage() {
                 }`}
               >
                 <span className={`grid size-10 place-items-center rounded-lg ${category.color}`}>
-                  <Icon size={20} />
+                  <Icon className="size-5" />
                 </span>
                 <div>
                   <p className="text-sm font-black text-ink">{category.name}</p>
@@ -119,7 +121,7 @@ export default function GamesPage() {
                     <h3 className="mt-2 text-xl font-black text-ink">{game.title}</h3>
                   </div>
                   <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-black text-amber-800">
-                    <Star size={14} className="fill-amber-500" /> {game.stars}/3
+                    <IconStar className="size-3.5 fill-amber-500 text-amber-500" /> {game.stars}/3
                   </span>
                 </div>
                 <p className="mt-2 text-xs font-medium text-slate-600 leading-relaxed">
@@ -135,7 +137,6 @@ export default function GamesPage() {
                       : 'bg-emerald-100 text-emerald-800'
                   }`}
                 >
-                  {game.status === 'Locked' ? <Lock size={14} /> : <Sparkles size={14} />}
                   {game.status}
                 </span>
 
@@ -144,14 +145,14 @@ export default function GamesPage() {
                     disabled
                     className="inline-flex items-center gap-1.5 rounded-xl bg-slate-200 px-4 py-2 text-xs font-black text-slate-500 cursor-not-allowed"
                   >
-                    <Lock size={14} /> Locked
+                    <IconLock className="size-3.5" /> Locked
                   </button>
                 ) : (
                   <Link
                     href={`/games/${game.id}`}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-leaf px-4 py-2 text-xs font-black text-white shadow-soft transition hover:bg-emerald-600"
                   >
-                    <Play size={14} /> Play Now
+                    <IconPlay className="size-3.5" /> Play Now
                   </Link>
                 )}
               </div>

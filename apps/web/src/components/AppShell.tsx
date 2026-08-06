@@ -2,9 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bell, GraduationCap, LogIn, UserCheck } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { getStoredUser, UserSession } from '@/lib/api';
-import { LoginModal } from '@/components/LoginModal';
+import { IconBell, IconGraduationCap, IconLogIn, IconUserCheck } from '@/components/Icons';
+
+const LoginModal = dynamic(() => import('@/components/LoginModal').then((m) => m.LoginModal), {
+  ssr: false
+});
 
 const nav = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -45,7 +49,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-3">
             <span className="grid size-11 place-items-center rounded-lg bg-leaf text-white shadow-soft">
-              <GraduationCap size={24} />
+              <IconGraduationCap className="size-6" />
             </span>
             <span>
               <span className="block text-lg font-black text-ink">Green Kids Hub</span>
@@ -74,7 +78,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
                   user.role
                 )}`}
               >
-                <UserCheck size={16} />
+                <IconUserCheck className="size-4" />
                 <span>{user.displayName}</span>
               </div>
             )}
@@ -83,7 +87,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
               onClick={() => setIsLoginOpen(true)}
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-3.5 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-900"
             >
-              <LogIn size={16} />
+              <IconLogIn className="size-4" />
               <span>Switch Role</span>
             </button>
 
@@ -91,7 +95,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
               aria-label="Notifications"
               className="grid size-10 place-items-center rounded-lg bg-white text-ink shadow-sm ring-1 ring-slate-200"
             >
-              <Bell size={18} />
+              <IconBell className="size-4" />
             </button>
           </div>
         </div>
@@ -99,7 +103,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</div>
 
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      {isLoginOpen && <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />}
     </main>
   );
 }

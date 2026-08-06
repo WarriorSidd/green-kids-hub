@@ -1,15 +1,27 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Game } from '@/lib/catalog';
-import { Star, Trophy, ArrowLeft, Clock } from 'lucide-react';
+import { games, Game } from '@/lib/catalog';
 import Link from 'next/link';
 
 interface GameEngineProps {
-  game: Game;
+  gameId?: string;
+  game?: Game;
 }
 
-export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
+export const GameEngine: React.FC<GameEngineProps> = ({ gameId, game: customGame }) => {
+  const activeGame = customGame || games.find((g) => g.id === gameId || g.slug === gameId) || games[0] || {
+    id: 'game-1',
+    slug: 'memory-garden-match',
+    title: 'Memory Garden Match',
+    description: 'Flip cards and find matching pairs of flowers, fruits, and animals to build visual memory recall.',
+    group: 'Group A' as const,
+    category: 'Memory Improvement',
+    type: 'MEMORY_CARDS' as const,
+    stars: 3,
+    status: 'Unlocked' as const
+  };
+
   const [seconds, setSeconds] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -25,7 +37,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
 
   useEffect(() => {
     initGame();
-  }, [game]);
+  }, [activeGame.id]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -43,7 +55,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
     setAttempts(0);
     setSelectedOption(null);
 
-    if (game.type === 'MEMORY_CARDS') {
+    if (activeGame.type === 'MEMORY_CARDS') {
       const symbols = ['\u{1F31F}', '\u{1F34E}', '\u{1F680}', '\u{1F3A8}', '\u{1F436}', '\u{1F9E9}'];
       const deck = [...symbols, ...symbols]
         .sort(() => Math.random() - 0.5)
@@ -122,16 +134,23 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
           href="/games"
           className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200"
         >
-          <ArrowLeft size={16} /> Exit Game
+          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Exit Game
         </Link>
 
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 text-slate-700 font-bold">
-            <Clock size={18} className="text-emerald-600" />
+            <svg className="size-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             <span>{seconds}s</span>
           </div>
           <div className="flex items-center gap-1 text-amber-600 font-bold">
-            <Star size={18} className="fill-amber-400" />
+            <svg className="size-5 fill-amber-400 text-amber-400" viewBox="0 0 24 24" stroke="currentColor">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
             <span>{score} pts</span>
           </div>
         </div>
@@ -141,14 +160,14 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
       <div className="relative min-h-[420px] rounded-2xl bg-white p-6 shadow-soft ring-1 ring-slate-200">
         <div className="mb-4">
           <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase text-emerald-800">
-            {game.group} · {game.type}
+            {activeGame.group} · {activeGame.type}
           </span>
-          <h1 className="mt-2 text-3xl font-black text-ink">{game.title}</h1>
-          <p className="text-sm font-medium text-slate-600">{game.description}</p>
+          <h1 className="mt-2 text-3xl font-black text-ink">{activeGame.title}</h1>
+          <p className="text-sm font-medium text-slate-600">{activeGame.description}</p>
         </div>
 
         {/* Engine 1: Memory Cards */}
-        {game.type === 'MEMORY_CARDS' && (
+        {activeGame.type === 'MEMORY_CARDS' && (
           <div className="mt-6 grid grid-cols-4 gap-4 sm:grid-cols-6">
             {cards.map((card, idx) => (
               <button
@@ -167,7 +186,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
         )}
 
         {/* Engine 2: Multiple Choice / Quiz */}
-        {(game.type === 'MULTIPLE_CHOICE' || game.type === 'INTERACTIVE_QUIZ') && (
+        {(activeGame.type === 'MULTIPLE_CHOICE' || activeGame.type === 'INTERACTIVE_QUIZ') && (
           <div className="mt-8 space-y-6">
             <div className="rounded-xl bg-emerald-50 p-6">
               <p className="text-xl font-black text-emerald-950">
@@ -193,7 +212,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
         )}
 
         {/* Engine 3: Default Interactive Fallback (Matching / Sequencing / Sorting) */}
-        {game.type !== 'MEMORY_CARDS' && game.type !== 'MULTIPLE_CHOICE' && game.type !== 'INTERACTIVE_QUIZ' && (
+        {activeGame.type !== 'MEMORY_CARDS' && activeGame.type !== 'MULTIPLE_CHOICE' && activeGame.type !== 'INTERACTIVE_QUIZ' && (
           <div className="mt-8 space-y-6">
             <div className="rounded-xl bg-amber-50 p-6">
               <p className="text-xl font-black text-amber-950">
@@ -219,18 +238,23 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
           <div className="absolute inset-0 z-30 flex items-center justify-center rounded-2xl bg-slate-900/75 p-6 backdrop-blur-md">
             <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-2xl">
               <div className="mx-auto grid size-16 place-items-center rounded-full bg-yellow-100 text-yellow-600">
-                <Trophy size={36} />
+                <svg className="size-9 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4m6 0h8m-8 4h8m-8 4h8m-8 4h8" />
+                </svg>
               </div>
               <h2 className="mt-4 text-3xl font-black text-ink">Awesome Job!</h2>
-              <p className="mt-1 text-sm font-semibold text-slate-500">You completed {game.title}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-500">You completed {activeGame.title}</p>
 
               <div className="my-6 flex justify-center gap-2">
                 {[1, 2, 3].map((star) => (
-                  <Star
+                  <svg
                     key={star}
-                    size={36}
-                    className={star <= calculateStars() ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300'}
-                  />
+                    className={`size-9 ${star <= calculateStars() ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300'}`}
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
                 ))}
               </div>
 
