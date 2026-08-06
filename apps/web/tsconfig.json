@@ -4,7 +4,6 @@
     "jsx": "preserve",
     "allowJs": false,
     "noEmit": true,
-    "incremental": true,
     "plugins": [
       {
         "name": "next"
@@ -20,7 +19,8 @@
       "dom.iterable",
       "esnext"
     ],
-    "isolatedModules": true
+    "isolatedModules": true,
+    "incremental": true
   },
   "include": [
     "next-env.d.ts",

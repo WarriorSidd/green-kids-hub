@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { categories, games as initialGames, groups } from '@/lib/catalog';
-import { CalendarClock, Lock, Play, Search, Star, Sparkles } from 'lucide-react';
+import { Lock, Play, Search, Star, Sparkles } from 'lucide-react';
 
 export default function GamesPage() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);

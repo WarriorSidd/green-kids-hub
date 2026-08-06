@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Game } from '@/lib/catalog';
-import { Star, Trophy, RefreshCw, ArrowLeft, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Star, Trophy, ArrowLeft, Clock } from 'lucide-react';
 import Link from 'next/link';
 
 interface GameEngineProps {
@@ -22,11 +22,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
 
   // Sequencing / Matching / Quiz State
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [quizQuestion, setQuizQuestion] = useState(0);
-  const [matchedPairs, setMatchedPairs] = useState<string[]>([]);
-  const [sequence, setSequence] = useState<string[]>([]);
 
-  // Sample Game Data Generators
   useEffect(() => {
     initGame();
   }, [game]);
@@ -46,27 +42,22 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
     setScore(0);
     setAttempts(0);
     setSelectedOption(null);
-    setQuizQuestion(0);
-    setMatchedPairs([]);
 
     if (game.type === 'MEMORY_CARDS') {
-      const symbols = ['🌟', '🍎', '🚀', '🎨', '🐶', '🧩'];
+      const symbols = ['\u{1F31F}', '\u{1F34E}', '\u{1F680}', '\u{1F3A8}', '\u{1F436}', '\u{1F9E9}'];
       const deck = [...symbols, ...symbols]
         .sort(() => Math.random() - 0.5)
         .map((symbol, idx) => ({ id: idx, symbol, flipped: false, matched: false }));
       setCards(deck);
-    } else if (game.type === 'SEQUENCING') {
-      const items = ['1. Seed 🌱', '2. Sprout 🌿', '3. Flower 🌸', '4. Fruit 🍎'];
-      setSequence([...items].sort(() => Math.random() - 0.5));
     }
   };
 
   // Memory Card Click Handler
   const handleCardClick = (index: number) => {
-    if (!isPlaying || cards[index]?.flipped || cards[index]?.matched || flippedCards.length >= 2) return;
+    const targetCard = cards[index];
+    if (!isPlaying || !targetCard || targetCard.flipped || targetCard.matched || flippedCards.length >= 2) return;
 
-    const newCards = [...cards];
-    newCards[index]!.flipped = true;
+    const newCards = cards.map((c, i) => (i === index ? { ...c, flipped: true } : c));
     setCards(newCards);
 
     const newFlipped = [...flippedCards, index];
@@ -74,23 +65,29 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
 
     if (newFlipped.length === 2) {
       setAttempts((a) => a + 1);
-      const first = newFlipped[0]!;
-      const second = newFlipped[1]!;
-      if (newCards[first]!.symbol === newCards[second]!.symbol) {
-        newCards[first]!.matched = true;
-        newCards[second]!.matched = true;
-        setCards(newCards);
+      const firstIndex = newFlipped[0] ?? 0;
+      const secondIndex = newFlipped[1] ?? 0;
+
+      const firstCard = newCards[firstIndex];
+      const secondCard = newCards[secondIndex];
+
+      if (firstCard && secondCard && firstCard.symbol === secondCard.symbol) {
+        const updatedCards = newCards.map((c, i) =>
+          i === firstIndex || i === secondIndex ? { ...c, matched: true } : c
+        );
+        setCards(updatedCards);
         setFlippedCards([]);
         setScore((s) => s + 20);
 
-        if (newCards.every((c) => c.matched)) {
-          completeGame(score + 20, attempts + 1);
+        if (updatedCards.every((c) => c.matched)) {
+          completeGame();
         }
       } else {
         setTimeout(() => {
-          newCards[first]!.flipped = false;
-          newCards[second]!.flipped = false;
-          setCards(newCards);
+          const resetCards = newCards.map((c, i) =>
+            i === firstIndex || i === secondIndex ? { ...c, flipped: false } : c
+          );
+          setCards(resetCards);
           setFlippedCards([]);
         }, 900);
       }
@@ -103,11 +100,11 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
     setAttempts((a) => a + 1);
     setScore((s) => s + 25);
     setTimeout(() => {
-      completeGame(score + 25, attempts + 1);
+      completeGame();
     }, 600);
   };
 
-  const completeGame = (finalScore: number, totalAttempts: number) => {
+  const completeGame = () => {
     setIsPlaying(false);
     setIsCompleted(true);
   };
@@ -163,7 +160,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
                     : 'bg-slate-100 text-transparent hover:bg-emerald-50'
                 }`}
               >
-                {card.flipped || card.matched ? card.symbol : '❓'}
+                {card.flipped || card.matched ? card.symbol : '\u{2753}'}
               </button>
             ))}
           </div>
@@ -204,7 +201,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {['Step 1: Focus', 'Step 2: Observe', 'Step 3: Analyze', 'Step 4: Complete'].map((item, i) => (
+              {['Step 1: Focus', 'Step 2: Observe', 'Step 3: Analyze', 'Step 4: Complete'].map((item) => (
                 <button
                   key={item}
                   onClick={() => handleQuizAnswer(item)}
@@ -239,7 +236,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
 
               <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 text-sm font-bold text-slate-700">
                 <div>Time: {seconds}s</div>
-                <div>Stars Earned: {calculateStars()}/3</div>
+                <div>Moves: {attempts}</div>
               </div>
 
               <div className="mt-6 flex gap-3">

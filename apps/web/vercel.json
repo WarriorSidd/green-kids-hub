@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd ../.. && npm install && npm --workspace @gkh/web run build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "installCommand": "cd ../.. && npm install"
-}
