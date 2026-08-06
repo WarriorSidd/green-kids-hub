@@ -60,6 +60,24 @@ const STORAGE_KEYS = {
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
+export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const user = getStoredUser();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>)
+  };
+
+  if (user?.token) {
+    headers['Authorization'] = `Bearer ${user.token}`;
+  }
+
+  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}: ${res.statusText}`);
+  }
+  return await res.json();
+}
+
 const AVATARS = [
   'bear', 'bunny', 'cat', 'dog', 'elephant', 'fox',
   'giraffe', 'koala', 'lion', 'owl', 'panda', 'penguin'
