@@ -5,7 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { AppShell } from '@/components/AppShell';
 import { getStoredUser, UserSession } from '@/lib/api';
-import { games } from '@/lib/catalog';
+import { games } from '@/lib/catalog-data';
 import {
   IconAward,
   IconBarChart,
