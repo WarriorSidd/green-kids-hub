@@ -1,0 +1,33 @@
+{
+  "name": "green-kids-hub-learning-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production-ready educational gaming and LMS platform for Senior KG to 5th Standard.",
+  "packageManager": "pnpm@9.12.3",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:web dev:api",
+    "dev:web": "npm --workspace @gkh/web run dev",
+    "dev:api": "npm --workspace @gkh/api run dev",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css,yml,yaml,prisma}\"",
+    "db:generate": "npm --workspace @gkh/api run prisma -- generate",
+    "db:migrate": "npm --workspace @gkh/api run prisma -- migrate dev",
+    "db:seed": "npm --workspace @gkh/api run prisma -- db seed"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.17.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: green-kids-hub-api
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm install && npm run db:generate && npm --workspace @gkh/api run build
+    startCommand: npm --workspace @gkh/api run prisma -- migrate deploy && npm --workspace @gkh/api run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: PRISMA_CONNECT_ON_START
+        value: "true"
+      - key: CORS_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 7d

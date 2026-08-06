@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleKey {
+  SUPER_ADMIN
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum LearningGroup {
+  GROUP_A
+  GROUP_B
+  GROUP_C
+}
+
+enum ClassLevel {
+  SENIOR_KG
+  STANDARD_1
+  STANDARD_2
+  STANDARD_3
+  STANDARD_4
+  STANDARD_5
+}
+
+enum GameStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  LOCKED
+  UNLOCKED
+  ARCHIVED
+}
+
+enum GameType {
+  MULTIPLE_CHOICE
+  DRAG_AND_DROP
+  MATCHING
+  MEMORY_CARDS
+  PUZZLE
+  FILL_IN_BLANK
+  SEQUENCING
+  SORTING
+  TIMED_CHALLENGE
+  INTERACTIVE_QUIZ
+}
+
+enum HomeworkStatus {
+  PENDING
+  SUBMITTED
+  REVIEWED
+  COMPLETED
+  OVERDUE
+}
+
+enum AchievementKind {
+  STAR
+  BADGE
+  CERTIFICATE
+}
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  passwordHash   String
+  displayName    String
+  roleId         String
+  role           Role          @relation(fields: [roleId], references: [id])
+  isActive       Boolean       @default(true)
+  refreshTokens  RefreshToken[]
+  studentProfile Student?
+  teacherProfile Teacher?
+  auditLogs      AuditLog[]
+  notifications  Notification[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  key         RoleKey          @unique
+  name        String
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  description String
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model RefreshToken {
+  id           String   @id @default(cuid())
+  tokenHash    String
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime @default(now())
+}
+
+model ClassRoom {
+  id          String        @id @default(cuid())
+  level       ClassLevel    @unique
+  group       LearningGroup
+  label       String
+  students    Student[]
+  teachers    TeacherClass[]
+  homework    Homework[]
+  createdAt   DateTime      @default(now())
+}
+
+model Student {
+  id             String               @id @default(cuid())
+  userId         String               @unique
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classRoomId    String?
+  classRoom      ClassRoom?           @relation(fields: [classRoomId], references: [id])
+  dateOfBirth    DateTime?
+  scores         Score[]
+  homeworkItems  HomeworkSubmission[]
+  achievements   StudentAchievement[]
+  totalStars     Int                  @default(0)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+}
+
+model Teacher {
+  id          String         @id @default(cuid())
+  userId      String         @unique
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classes     TeacherClass[]
+  homework    Homework[]
+  createdAt   DateTime       @default(now())
+}
+
+model TeacherClass {
+  teacherId   String
+  classRoomId String
+  teacher     Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  classRoom   ClassRoom @relation(fields: [classRoomId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, classRoomId])
+}
+
+model GameCategory {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  games       Game[]
+}
+
+model Game {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  description     String
+  instructions    String
+  categoryId      String
+  category        GameCategory  @relation(fields: [categoryId], references: [id])
+  group           LearningGroup
+  classLevels     ClassLevel[]
+  type            GameType
+  status          GameStatus    @default(DRAFT)
+  releaseDate     DateTime?
+  approvedById    String?
+  templateKey     String
+  content         Json
+  estimatedMinutes Int          @default(8)
+  maxStars        Int           @default(3)
+  scores          Score[]
+  homework        HomeworkGame[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Homework {
+  id          String               @id @default(cuid())
+  title       String
+  description String
+  dueDate     DateTime
+  categoryId  String?
+  classRoomId String
+  teacherId   String
+  classRoom   ClassRoom            @relation(fields: [classRoomId], references: [id])
+  teacher     Teacher              @relation(fields: [teacherId], references: [id])
+  games       HomeworkGame[]
+  submissions HomeworkSubmission[]
+  createdAt   DateTime             @default(now())
+}
+
+model HomeworkGame {
+  homeworkId String
+  gameId     String
+  homework   Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  game       Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@id([homeworkId, gameId])
+}
+
+model HomeworkSubmission {
+  id          String         @id @default(cuid())
+  homeworkId  String
+  studentId   String
+  homework    Homework       @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  student     Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status      HomeworkStatus @default(PENDING)
+  submittedAt DateTime?
+  reviewedAt  DateTime?
+  score       Int?
+  feedback    String?
+
+  @@unique([homeworkId, studentId])
+}
+
+model Score {
+  id          String   @id @default(cuid())
+  studentId   String
+  gameId      String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  game        Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  points      Int
+  stars       Int
+  accuracy    Float
+  durationSec Int
+  playedAt    DateTime @default(now())
+}
+
+model Achievement {
+  id          String               @id @default(cuid())
+  slug        String               @unique
+  name        String
+  description String
+  kind        AchievementKind
+  icon        String
+  criteria    Json
+  students    StudentAchievement[]
+}
+
+model StudentAchievement {
+  studentId     String
+  achievementId String
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  awardedAt     DateTime    @default(now())
+
+  @@id([studentId, achievementId])
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  type      String
+  title     String
+  filters   Json
+  data      Json
+  createdBy String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+}
