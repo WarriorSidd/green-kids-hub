@@ -57,6 +57,7 @@ const STORAGE_KEYS = {
 };
 
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 const AVATARS = [
   'bear', 'bunny', 'cat', 'dog', 'elephant', 'fox',
