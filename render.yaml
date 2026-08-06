@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     rootDir: .
-    buildCommand: npm install && npm run db:generate && npm --workspace @gkh/api run build
+    buildCommand: npm install --include=dev && npm run db:generate && npm --workspace @gkh/api run build
     startCommand: npm --workspace @gkh/api run prisma -- migrate deploy && npm --workspace @gkh/api run start
     healthCheckPath: /api/health
     envVars:
