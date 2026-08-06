@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const [showHomeworkModal, setShowHomeworkModal] = useState(false);
   const [hwTitle, setHwTitle] = useState('Brain Builder Week 2');
   const [hwDueDate, setHwDueDate] = useState('2026-08-15');
-  const [hwGameId, setHwGameId] = useState(games[0].id);
+  const [hwGameId, setHwGameId] = useState(games[0]!.id);
   const [homeworkList, setHomeworkList] = useState([
     {
       id: 'hw-1',
@@ -62,15 +62,15 @@ export default function DashboardPage() {
 
   const handleAddHomework = (e: React.FormEvent) => {
     e.preventDefault();
-    const game = games.find((g) => g.id === hwGameId) || games[0];
+    const game = games.find((g) => g.id === hwGameId) || games[0]!;
     setHomeworkList([
       ...homeworkList,
       {
         id: `hw-${Date.now()}`,
         title: hwTitle,
         dueDate: `Due ${hwDueDate}`,
-        gameTitle: game.title,
-        gameId: game.id,
+        gameTitle: game!.title,
+        gameId: game!.id,
         status: 'PENDING'
       }
     ]);

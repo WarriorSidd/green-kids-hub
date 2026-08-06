@@ -63,10 +63,10 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
 
   // Memory Card Click Handler
   const handleCardClick = (index: number) => {
-    if (!isPlaying || cards[index].flipped || cards[index].matched || flippedCards.length >= 2) return;
+    if (!isPlaying || cards[index]?.flipped || cards[index]?.matched || flippedCards.length >= 2) return;
 
     const newCards = [...cards];
-    newCards[index].flipped = true;
+    newCards[index]!.flipped = true;
     setCards(newCards);
 
     const newFlipped = [...flippedCards, index];
@@ -74,10 +74,11 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
 
     if (newFlipped.length === 2) {
       setAttempts((a) => a + 1);
-      const [first, second] = newFlipped;
-      if (newCards[first].symbol === newCards[second].symbol) {
-        newCards[first].matched = true;
-        newCards[second].matched = true;
+      const first = newFlipped[0]!;
+      const second = newFlipped[1]!;
+      if (newCards[first]!.symbol === newCards[second]!.symbol) {
+        newCards[first]!.matched = true;
+        newCards[second]!.matched = true;
         setCards(newCards);
         setFlippedCards([]);
         setScore((s) => s + 20);
@@ -87,8 +88,8 @@ export const GameEngine: React.FC<GameEngineProps> = ({ game }) => {
         }
       } else {
         setTimeout(() => {
-          newCards[first].flipped = false;
-          newCards[second].flipped = false;
+          newCards[first]!.flipped = false;
+          newCards[second]!.flipped = false;
           setCards(newCards);
           setFlippedCards([]);
         }, 900);

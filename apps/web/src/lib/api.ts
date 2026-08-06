@@ -40,13 +40,13 @@ export const DEMO_ACCOUNTS: UserSession[] = [
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 export function getStoredUser(): UserSession {
-  if (typeof window === 'undefined') return DEMO_ACCOUNTS[0];
+  if (typeof window === 'undefined') return DEMO_ACCOUNTS[0]!;
   const raw = localStorage.getItem('gkh_user');
-  if (!raw) return DEMO_ACCOUNTS[0]; // Default to student
+  if (!raw) return DEMO_ACCOUNTS[0]!; // Default to student
   try {
-    return JSON.parse(raw);
+    return JSON.parse(raw) as UserSession;
   } catch {
-    return DEMO_ACCOUNTS[0];
+    return DEMO_ACCOUNTS[0]!;
   }
 }
 

@@ -10,7 +10,7 @@ export default function GamePlayPage() {
   const params = useParams();
   const gameId = params.id as string;
 
-  const game = games.find((g) => g.id === gameId || g.slug === gameId) || games[0];
+  const game = games.find((g) => g.id === gameId || g.slug === gameId) || games[0]!;
 
   return (
     <AppShell>

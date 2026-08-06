@@ -28,9 +28,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const matched = DEMO_ACCOUNTS.find((a) => a.email.toLowerCase() === email.toLowerCase()) || {
       id: `custom-${Date.now()}`,
       email,
-      displayName: email.split('@')[0],
+      displayName: email.split('@')[0] || email,
       role: 'STUDENT' as const
-    };
+    } satisfies UserSession;
 
     setTimeout(() => {
       setStoredUser(matched);
