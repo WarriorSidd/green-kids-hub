@@ -1,4 +1,4 @@
-import { StoredUser, ScoreEntry, AuditEntry, ClassLevel, RoleType } from './api';
+import { StoredUser, ScoreEntry, AuditEntry, ClassLevel } from './api';
 
 // Simple password hashing helper matching api.ts
 function simpleHash(str: string): string {
