@@ -6,7 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { games as initialGames, groups } from '@/lib/catalog-data';
 import { categories } from '@/lib/catalog';
 import { IconLock, IconPlay, IconStar } from '@/components/Icons';
-import { getStoredUser, isGameUnlocked, UserSession } from '@/lib/api';
+import { getStoredUser, isGameUnlocked, UserSession, syncWithServer } from '@/lib/api';
 
 export default function GamesPage() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -18,6 +18,11 @@ export default function GamesPage() {
   useEffect(() => {
     setUser(getStoredUser());
     setIsLoading(false);
+
+    // Sync latest game unlock status from cloud server
+    syncWithServer().then(() => {
+      setUser(getStoredUser());
+    });
   }, []);
 
   if (isLoading) return <AppShell><div className="p-8 font-medium">Loading...</div></AppShell>;

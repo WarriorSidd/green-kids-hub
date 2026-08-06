@@ -528,7 +528,7 @@ export function isGameUnlocked(classLevel: ClassLevel | undefined, gameId: strin
   return locks.some((l) => l.classLevel === classLevel && l.gameId === gameId);
 }
 
-export function setGameUnlocked(classLevel: ClassLevel, gameId: string, unlocked: boolean, callerRole: RoleType): void {
+export async function setGameUnlocked(classLevel: ClassLevel, gameId: string, unlocked: boolean, callerRole: RoleType): Promise<void> {
   if (callerRole !== 'SUPER_ADMIN' && callerRole !== 'ADMIN' && callerRole !== 'TEACHER') return;
 
   let locks = getStore<GameLockEntry>(STORAGE_KEYS.GAME_LOCKS);
@@ -542,6 +542,17 @@ export function setGameUnlocked(classLevel: ClassLevel, gameId: string, unlocked
   }
 
   setStore(STORAGE_KEYS.GAME_LOCKS, locks);
+
+  // Sync game lock to cloud server
+  try {
+    await fetch(`${API_BASE}/locks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classLevel, gameId, unlocked })
+    });
+  } catch {
+    // Offline fallback
+  }
 
   const caller = getStoredUser();
   addAuditEntry(

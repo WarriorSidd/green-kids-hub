@@ -430,9 +430,9 @@ function GameLockMatrix({ callerRole, classFilter, refresh }: { callerRole: Role
     ? [classFilter]
     : ['SENIOR_KG', 'STANDARD_1', 'STANDARD_2', 'STANDARD_3', 'STANDARD_4', 'STANDARD_5'];
 
-  const handleToggle = (cl: ClassLevel, gameId: string) => {
+  const handleToggle = async (cl: ClassLevel, gameId: string) => {
     const current = isGameUnlocked(cl, gameId);
-    setGameUnlocked(cl, gameId, !current, callerRole);
+    await setGameUnlocked(cl, gameId, !current, callerRole);
     refresh();
   };
 

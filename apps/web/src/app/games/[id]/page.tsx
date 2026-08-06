@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
-import { getStoredUser, isGameUnlocked, UserSession } from '@/lib/api';
+import { getStoredUser, isGameUnlocked, UserSession, syncWithServer } from '@/lib/api';
 import { games } from '@/lib/catalog-data';
 
 const GameEngine = dynamic(() => import('@/components/GameEngine').then((m) => m.GameEngine), {
@@ -22,6 +22,10 @@ export default function GamePlayPage() {
   useEffect(() => {
     setUser(getStoredUser());
     setIsLoading(false);
+
+    syncWithServer().then(() => {
+      setUser(getStoredUser());
+    });
   }, []);
 
   if (isLoading) {
