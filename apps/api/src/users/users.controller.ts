@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ClassLevel, RoleKey } from '@prisma/client';
+import { RoleKey } from '@prisma/client';
 import { permissions } from '../rbac/permissions';
 import { RequirePermissions } from '../rbac/permissions.decorator';
 import { RbacGuard } from '../rbac/rbac.guard';
