@@ -14,6 +14,7 @@ export interface UserSession {
   studentId?: string;
   teacherId?: string;
   avatar?: string;
+  token?: string;
   isActive: boolean;
   sessionExpiresAt?: number;
 }
