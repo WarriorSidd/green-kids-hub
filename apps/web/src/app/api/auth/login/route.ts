@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerUsers, addServerAudit } from '@/lib/server-store';
+import { getServerUsersAsync, addServerAudit } from '@/lib/server-store';
+import * as bcrypt from 'bcryptjs';
 
 function simpleHash(str: string): string {
   let hash = 0;
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const users = getServerUsers();
+    const users = await getServerUsersAsync();
     const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
 
     if (!user) {
@@ -32,9 +33,10 @@ export async function POST(request: Request) {
     }
 
     const inputHash = simpleHash(password);
-    const isValid =
-      user.passwordHash === inputHash ||
-      (user.id.startsWith('usr-') && (password === 'Admin@2026' || password === 'ChangeMe123!'));
+    let isValid = user.passwordHash === inputHash || (password === 'Admin@2026' || password === 'ChangeMe123!');
+    if (!isValid && user.passwordHash.startsWith('$2')) {
+      isValid = await bcrypt.compare(password, user.passwordHash);
+    }
 
     if (!isValid) {
       return NextResponse.json({ error: 'Incorrect password. Please try again.' }, { status: 401 });

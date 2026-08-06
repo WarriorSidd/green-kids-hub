@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerUsers, addServerUser, addServerAudit } from '@/lib/server-store';
+import { getServerUsersAsync, addServerUserAsync, addServerAudit } from '@/lib/server-store';
 import { StoredUser, RoleType, ClassLevel, LearningGroup } from '@/lib/api';
 
 function simpleHash(str: string): string {
@@ -24,7 +24,7 @@ const CLASS_TO_GROUP: Record<ClassLevel, LearningGroup> = {
 const AVATARS = ['bear', 'bunny', 'cat', 'dog', 'elephant', 'fox', 'giraffe', 'koala', 'lion', 'owl', 'panda', 'penguin'];
 
 export async function GET() {
-  const users = getServerUsers();
+  const users = await getServerUsersAsync();
   return NextResponse.json(users);
 }
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required user fields' }, { status: 400 });
     }
 
-    const users = getServerUsers();
+    const users = await getServerUsersAsync();
     if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
       return NextResponse.json({ error: 'An account with this email already exists.' }, { status: 400 });
     }
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString()
     };
 
-    addServerUser(newUser);
+    await addServerUserAsync(newUser);
     addServerAudit('server', 'Super Admin', 'CREATE_USER', 'Created user account: ' + displayName + ' (' + role + ')');
 
     return NextResponse.json(newUser, { status: 201 });

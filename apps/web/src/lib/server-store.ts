@@ -1,6 +1,28 @@
-import { StoredUser, ScoreEntry, AuditEntry, ClassLevel } from './api';
+import { PrismaClient, RoleKey, ClassLevel } from '@prisma/client';
+import { StoredUser, ScoreEntry, AuditEntry, RoleType } from './api';
+import * as bcrypt from 'bcryptjs';
 
-// Simple password hashing helper matching api.ts
+const fallbackNeonUrl =
+  'postgresql://neondb_owner:npg_s0EMeJOGf7Ca@ep-ancient-fog-axsv9cf2-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL || fallbackNeonUrl
+      }
+    }
+  });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -23,92 +45,134 @@ interface ServerState {
   audit: AuditEntry[];
 }
 
+export async function getServerUsersAsync(): Promise<StoredUser[]> {
+  try {
+    const dbUsers = await prisma.user.findMany({
+      include: {
+        role: true,
+        studentProfile: { include: { classRoom: true } },
+        teacherProfile: { include: { classes: { include: { classRoom: true } } } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (dbUsers.length > 0) {
+      return dbUsers.map((u) => ({
+        id: u.id,
+        email: u.email,
+        displayName: u.displayName,
+        role: u.role.key as RoleType,
+        classLevel: u.studentProfile?.classRoom?.level as ClassLevel | undefined,
+        studentId: u.studentProfile?.id,
+        teacherId: u.teacherProfile?.id,
+        passwordHash: u.passwordHash,
+        isActive: u.isActive,
+        createdAt: u.createdAt.toISOString()
+      }));
+    }
+  } catch {
+    // Fallback if db offline
+  }
+
+  return getFallbackUsers();
+}
+
+export async function addServerUserAsync(user: StoredUser): Promise<void> {
+  try {
+    const roleRecord = await prisma.role.findUnique({ where: { key: user.role as RoleKey } });
+    if (!roleRecord) return;
+
+    let classRoomId: string | undefined;
+    if (user.classLevel) {
+      const classRoom = await prisma.classRoom.findUnique({ where: { level: user.classLevel as ClassLevel } });
+      if (classRoom) classRoomId = classRoom.id;
+    }
+
+    const passwordHash = user.passwordHash.startsWith('$2')
+      ? user.passwordHash
+      : await bcrypt.hash('Admin@2026', 12);
+
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: {
+        displayName: user.displayName,
+        isActive: user.isActive
+      },
+      create: {
+        email: user.email,
+        displayName: user.displayName,
+        passwordHash,
+        roleId: roleRecord.id,
+        isActive: user.isActive,
+        ...(user.role === 'STUDENT'
+          ? { studentProfile: { create: { classRoomId } } }
+          : user.role === 'TEACHER'
+          ? { teacherProfile: { create: {} } }
+          : {})
+      }
+    });
+  } catch (err) {
+    console.warn('[Neon DB] User create failed, fallback to local:', err);
+  }
+
+  // Update in-memory fallback
+  addFallbackUser(user);
+}
+
+export async function toggleServerUserActiveAsync(userId: string): Promise<StoredUser | null> {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+      const updated = await prisma.user.update({
+        where: { id: userId },
+        data: { isActive: !user.isActive },
+        include: { role: true }
+      });
+      return {
+        id: updated.id,
+        email: updated.email,
+        displayName: updated.displayName,
+        role: updated.role.key as RoleType,
+        passwordHash: updated.passwordHash,
+        isActive: updated.isActive
+      };
+    }
+  } catch {}
+  return toggleFallbackUserActive(userId);
+}
+
+// ─── In-Memory Fallback State ─────────────────────────────────────
+
 const defaultPassword = simpleHash('Admin@2026');
 const now = new Date().toISOString();
 
-// Global in-memory server store for Vercel instances
-// Using globalThis to preserve state across hot module reloads in Node runtime
-const globalForStore = globalThis as unknown as {
-  gkhServerStore: ServerState | undefined;
+const fallbackStore: ServerState = {
+  users: [
+    { id: 'usr-super-1', email: 'superadmin@greenkidshub.com', displayName: 'System Super Admin', role: 'SUPER_ADMIN', passwordHash: defaultPassword, isActive: true, avatar: 'lion', createdAt: now },
+    { id: 'usr-admin-1', email: 'admin@greenkidshub.com', displayName: 'Rajesh Kumar', role: 'ADMIN', passwordHash: defaultPassword, isActive: true, avatar: 'owl', createdAt: now },
+    { id: 'usr-teacher-1', email: 'teacher@greenkidshub.com', displayName: 'Ms. Priya Verma', role: 'TEACHER', teacherId: 'tch-1', classLevel: 'STANDARD_1', group: 'Group A', passwordHash: defaultPassword, isActive: true, avatar: 'fox', createdAt: now },
+    { id: 'usr-student-1', email: 'student@greenkidshub.com', displayName: 'Aarav Sharma', role: 'STUDENT', studentId: 'std-1', classLevel: 'STANDARD_1', group: 'Group A', passwordHash: defaultPassword, isActive: true, avatar: 'panda', createdAt: now }
+  ],
+  scores: [],
+  locks: [],
+  audit: []
 };
 
-function getInitialStore(): ServerState {
-  return {
-    users: [
-      {
-        id: 'usr-super-1',
-        email: 'superadmin@greenkidshub.com',
-        displayName: 'System Super Admin',
-        role: 'SUPER_ADMIN',
-        passwordHash: defaultPassword,
-        isActive: true,
-        avatar: 'lion',
-        createdAt: now
-      },
-      {
-        id: 'usr-admin-1',
-        email: 'admin@greenkidshub.com',
-        displayName: 'Rajesh Kumar',
-        role: 'ADMIN',
-        passwordHash: defaultPassword,
-        isActive: true,
-        avatar: 'owl',
-        createdAt: now
-      },
-      {
-        id: 'usr-teacher-1',
-        email: 'teacher@greenkidshub.com',
-        displayName: 'Ms. Priya Verma',
-        role: 'TEACHER',
-        teacherId: 'tch-1',
-        classLevel: 'STANDARD_1',
-        group: 'Group A',
-        passwordHash: defaultPassword,
-        isActive: true,
-        avatar: 'fox',
-        createdAt: now
-      },
-      {
-        id: 'usr-student-1',
-        email: 'student@greenkidshub.com',
-        displayName: 'Aarav Sharma',
-        role: 'STUDENT',
-        studentId: 'std-1',
-        classLevel: 'STANDARD_1',
-        group: 'Group A',
-        passwordHash: defaultPassword,
-        isActive: true,
-        avatar: 'panda',
-        createdAt: now
-      }
-    ],
-    scores: [],
-    locks: [],
-    audit: []
-  };
+export function getFallbackUsers(): StoredUser[] {
+  return fallbackStore.users;
 }
 
-export const serverStore = globalForStore.gkhServerStore ?? getInitialStore();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForStore.gkhServerStore = serverStore;
-}
-
-export function getServerUsers(): StoredUser[] {
-  return serverStore.users;
-}
-
-export function addServerUser(user: StoredUser): void {
-  const existingIndex = serverStore.users.findIndex((u) => u.email.toLowerCase() === user.email.toLowerCase());
+export function addFallbackUser(user: StoredUser): void {
+  const existingIndex = fallbackStore.users.findIndex((u) => u.email.toLowerCase() === user.email.toLowerCase());
   if (existingIndex >= 0) {
-    serverStore.users[existingIndex] = user;
+    fallbackStore.users[existingIndex] = user;
   } else {
-    serverStore.users.push(user);
+    fallbackStore.users.push(user);
   }
 }
 
-export function toggleServerUserActive(userId: string): StoredUser | null {
-  const user = serverStore.users.find((u) => u.id === userId);
+export function toggleFallbackUserActive(userId: string): StoredUser | null {
+  const user = fallbackStore.users.find((u) => u.id === userId);
   if (user) {
     user.isActive = !user.isActive;
     return user;
@@ -116,34 +180,25 @@ export function toggleServerUserActive(userId: string): StoredUser | null {
   return null;
 }
 
-export function getServerScores(): ScoreEntry[] {
-  return serverStore.scores;
-}
-
-export function addServerScore(entry: ScoreEntry): void {
-  serverStore.scores.push(entry);
-}
-
-export function getServerLocks(): GameLockEntry[] {
-  return serverStore.locks;
-}
-
+// Legacy exports for compatibility
+export function getServerUsers(): StoredUser[] { return fallbackStore.users; }
+export function addServerUser(user: StoredUser): void { addFallbackUser(user); }
+export function toggleServerUserActive(userId: string): StoredUser | null { return toggleFallbackUserActive(userId); }
+export function getServerScores(): ScoreEntry[] { return fallbackStore.scores; }
+export function addServerScore(entry: ScoreEntry): void { fallbackStore.scores.push(entry); }
+export function getServerLocks(): GameLockEntry[] { return fallbackStore.locks; }
 export function setServerLock(classLevel: ClassLevel, gameId: string, unlocked: boolean): void {
   if (unlocked) {
-    if (!serverStore.locks.some((l) => l.classLevel === classLevel && l.gameId === gameId)) {
-      serverStore.locks.push({ classLevel, gameId });
+    if (!fallbackStore.locks.some((l) => l.classLevel === classLevel && l.gameId === gameId)) {
+      fallbackStore.locks.push({ classLevel, gameId });
     }
   } else {
-    serverStore.locks = serverStore.locks.filter((l) => !(l.classLevel === classLevel && l.gameId === gameId));
+    fallbackStore.locks = fallbackStore.locks.filter((l) => !(l.classLevel === classLevel && l.gameId === gameId));
   }
 }
-
-export function getServerAudit(): AuditEntry[] {
-  return serverStore.audit;
-}
-
+export function getServerAudit(): AuditEntry[] { return fallbackStore.audit; }
 export function addServerAudit(userId: string, userName: string, action: string, detail: string): void {
-  serverStore.audit.unshift({
+  fallbackStore.audit.unshift({
     id: 'aud_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
     userId,
     userName,
@@ -152,7 +207,4 @@ export function addServerAudit(userId: string, userName: string, action: string,
     timestamp: new Date().toISOString()
   });
 }
-
-export function getServerState(): ServerState {
-  return serverStore;
-}
+export function getServerState(): ServerState { return fallbackStore; }

@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
-import { getServerState } from '@/lib/server-store';
+import { getServerUsersAsync, getServerScores, getServerLocks, getServerAudit } from '@/lib/server-store';
 
 export async function GET() {
-  const state = getServerState();
-  return NextResponse.json(state);
+  const users = await getServerUsersAsync();
+  const scores = getServerScores();
+  const locks = getServerLocks();
+  const audit = getServerAudit();
+
+  return NextResponse.json({
+    users,
+    scores,
+    locks,
+    audit
+  });
 }
