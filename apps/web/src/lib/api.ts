@@ -58,7 +58,7 @@ const STORAGE_KEYS = {
 };
 
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const user = getStoredUser();
@@ -181,10 +181,38 @@ export function initializeApp(): void {
   localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
 }
 
+export async function syncWithServer(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    const res = await fetch(`${API_BASE}/sync`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.users) && data.users.length > 0) {
+        const localUsers = getStore<StoredUser>(STORAGE_KEYS.USERS);
+        data.users.forEach((serverUser: StoredUser) => {
+          const idx = localUsers.findIndex((u) => u.email.toLowerCase() === serverUser.email.toLowerCase());
+          if (idx >= 0) {
+            localUsers[idx] = serverUser;
+          } else {
+            localUsers.push(serverUser);
+          }
+        });
+        setStore(STORAGE_KEYS.USERS, localUsers);
+      }
+      if (Array.isArray(data.locks)) {
+        setStore(STORAGE_KEYS.GAME_LOCKS, data.locks);
+      }
+    }
+  } catch {
+    // Offline or fallback mode
+  }
+}
+
 // ─── Authentication ──────────────────────────────────────────────
 
 export async function authenticateUser(email: string, password: string): Promise<UserSession> {
   initializeApp();
+  await syncWithServer();
 
   // Try authenticating with backend API first if online
   try {
