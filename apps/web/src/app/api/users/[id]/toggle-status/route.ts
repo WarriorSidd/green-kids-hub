@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { toggleServerUserActive, addServerAudit } from '@/lib/server-store';
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const userId = params.id;
   const updated = toggleServerUserActive(userId);
   if (!updated) {
