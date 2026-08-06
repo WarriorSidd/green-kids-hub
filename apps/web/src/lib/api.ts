@@ -163,11 +163,41 @@ export function initializeApp(): void {
 
 // ─── Authentication ──────────────────────────────────────────────
 
-export function authenticateUser(email: string, password: string): UserSession {
+export async function authenticateUser(email: string, password: string): Promise<UserSession> {
   initializeApp();
+
+  // Try authenticating with backend API first if online
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const session: UserSession = {
+        id: data.user.id,
+        email: data.user.email,
+        displayName: data.user.displayName,
+        role: data.user.role as RoleType,
+        studentId: data.user.studentId,
+        teacherId: data.user.teacherId,
+        token: data.accessToken,
+        isActive: true,
+        sessionExpiresAt: Date.now() + SESSION_DURATION_MS
+      };
+      setStoredUser(session);
+      addAuditEntry(session.id, session.displayName, 'LOGIN', 'User logged in via Cloud API');
+      return session;
+    }
+  } catch {
+    // API server offline or unreachable — fallback to local database store
+  }
+
+  // Fallback to local store
   let users = getStore<StoredUser>(STORAGE_KEYS.USERS);
   
-  // Auto-heal if seed accounts are missing
   if (users.length === 0 || !users.some((u) => u.email.toLowerCase() === 'superadmin@greenkidshub.com')) {
     localStorage.removeItem(STORAGE_KEYS.INITIALIZED);
     initializeApp();
@@ -241,16 +271,29 @@ export function isSessionValid(): boolean {
 
 // ─── User Management (Super Admin Only) ──────────────────────────
 
-export function createUserAccount(
+export async function createUserAccount(
   email: string,
   displayName: string,
   role: RoleType,
   classLevel: ClassLevel | undefined,
   password: string,
   callerRole: RoleType
-): StoredUser {
+): Promise<StoredUser> {
   if (callerRole !== 'SUPER_ADMIN') {
     throw new Error('Only Super Admin can create user accounts.');
+  }
+
+  // Attempt backend API create first if session token exists
+  const currentUser = getStoredUser();
+  if (currentUser?.token) {
+    try {
+      await apiFetch('/users', {
+        method: 'POST',
+        body: JSON.stringify({ email, displayName, role, classLevel, password })
+      });
+    } catch {
+      // Backend request failed — proceed to persist locally
+    }
   }
 
   const users = getStore<StoredUser>(STORAGE_KEYS.USERS);

@@ -68,7 +68,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -79,7 +79,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
 
     setLoading(true);
     try {
-      createUserAccount(email, displayName, role, role === 'STUDENT' || role === 'TEACHER' ? classLevel : undefined, password, 'SUPER_ADMIN');
+      await createUserAccount(email, displayName, role, role === 'STUDENT' || role === 'TEACHER' ? classLevel : undefined, password, 'SUPER_ADMIN');
       showToast('User account created: ' + displayName, 'success');
       onClose();
     } catch (err: unknown) {
