@@ -103,7 +103,34 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
+          <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+            <p className="font-bold text-slate-700 mb-1.5">Quick Demo Accounts:</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => { setEmail('superadmin@greenkidshub.com'); setPassword('Admin@2026'); }}
+                className="px-2 py-1 bg-purple-100 text-purple-800 font-bold rounded hover:bg-purple-200 transition"
+              >
+                Super Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEmail('teacher@greenkidshub.com'); setPassword('Admin@2026'); }}
+                className="px-2 py-1 bg-emerald-100 text-emerald-800 font-bold rounded hover:bg-emerald-200 transition"
+              >
+                Teacher
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEmail('student@greenkidshub.com'); setPassword('Admin@2026'); }}
+                className="px-2 py-1 bg-amber-100 text-amber-800 font-bold rounded hover:bg-amber-200 transition"
+              >
+                Student
+              </button>
+            </div>
+          </div>
+
+          <p className="mt-4 text-center text-xs text-gray-500">
             Forgot Password? Contact your administrator.
           </p>
         </div>
