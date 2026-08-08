@@ -4,16 +4,13 @@ const fallbackNeonUrl =
   'postgresql://neondb_owner:npg_s0EMeJOGf7Ca@ep-ancient-fog-axsv9cf2-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
 
 const globalForPrisma = globalThis as unknown as {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  prisma: any;
+  prisma: unknown;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getPrisma(): any {
+export function getPrisma(): unknown {
   if (typeof window !== 'undefined') return null;
   try {
     if (!globalForPrisma.prisma) {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { PrismaClient } = require('@prisma/client');
       globalForPrisma.prisma = new PrismaClient({
         datasources: {
@@ -52,10 +49,10 @@ interface ServerState {
 }
 
 export async function getServerUsersAsync(): Promise<StoredUser[]> {
-  const db = getPrisma();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = getPrisma() as any;
   if (db) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dbUsers = await db.user.findMany({
         include: {
           role: true,
@@ -81,7 +78,7 @@ export async function getServerUsersAsync(): Promise<StoredUser[]> {
         }));
       }
     } catch {
-      // Fallback if db offline
+      /* ignore db error */
     }
   }
 
@@ -89,7 +86,8 @@ export async function getServerUsersAsync(): Promise<StoredUser[]> {
 }
 
 export async function addServerUserAsync(user: StoredUser): Promise<void> {
-  const db = getPrisma();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = getPrisma() as any;
   if (db) {
     try {
       const roleRecord = await db.role.findUnique({ where: { key: user.role } });
@@ -130,7 +128,8 @@ export async function addServerUserAsync(user: StoredUser): Promise<void> {
 }
 
 export async function toggleServerUserActiveAsync(userId: string): Promise<StoredUser | null> {
-  const db = getPrisma();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = getPrisma() as any;
   if (db) {
     try {
       const user = await db.user.findUnique({ where: { id: userId } });
@@ -150,7 +149,9 @@ export async function toggleServerUserActiveAsync(userId: string): Promise<Store
           createdAt: updated.createdAt.toISOString()
         };
       }
-    } catch {}
+    } catch {
+      /* ignore db error */
+    }
   }
   return toggleFallbackUserActive(userId);
 }
