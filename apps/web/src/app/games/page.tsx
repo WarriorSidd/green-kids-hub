@@ -1,15 +1,23 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
-import { games as initialGames, groups } from '@/lib/catalog-data';
+import { games as initialGames } from '@/lib/catalog-data';
 import { categories } from '@/lib/catalog';
+import { getStoredUser, isGameUnlocked, UserSession, syncWithServer, CLASS_LABELS, ClassLevel } from '@/lib/api';
 import { IconLock, IconPlay, IconStar } from '@/components/Icons';
-import { getStoredUser, isGameUnlocked, UserSession, syncWithServer } from '@/lib/api';
+
+const classLevelsList: { key: ClassLevel; label: string }[] = [
+  { key: 'SENIOR_KG', label: 'Senior KG' },
+  { key: 'STANDARD_1', label: 'Standard 1' },
+  { key: 'STANDARD_2', label: 'Standard 2' },
+  { key: 'STANDARD_3', label: 'Standard 3' },
+  { key: 'STANDARD_4', label: 'Standard 4' },
+  { key: 'STANDARD_5', label: 'Standard 5' }
+];
 
 export default function GamesPage() {
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<UserSession | null>(null);
@@ -52,27 +60,23 @@ export default function GamesPage() {
   }
 
   const isStudent = user.role === 'STUDENT';
-  
-  const availableGames = isStudent && user.group
-    ? initialGames.filter(g => g.group === user.group)
-    : initialGames;
+  const userClassLabel = user.classLevel ? CLASS_LABELS[user.classLevel] : undefined;
 
-  const filteredGames = availableGames.filter((game) => {
-    const matchesGroup = !selectedGroup || game.group === selectedGroup;
+  const filteredGames = initialGames.filter((game) => {
     const matchesCategory = !selectedCategory || game.category === selectedCategory;
     const matchesSearch =
       !searchQuery ||
       game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       game.type.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesGroup && matchesCategory && matchesSearch;
+    return matchesCategory && matchesSearch;
   });
 
   return (
     <AppShell>
       <div className="grid gap-6">
-        {isStudent && user.group && (
+        {isStudent && userClassLabel && (
           <div className="rounded-xl bg-emerald-100 p-4 text-emerald-800 ring-1 ring-emerald-200">
-            <p className="font-bold">Welcome! You belong to {user.group}. Showing games for your level.</p>
+            <p className="font-bold">Welcome! You are in <span className="underline font-black">{userClassLabel}</span>. Showing games for your class.</p>
           </div>
         )}
 
@@ -84,7 +88,7 @@ export default function GamesPage() {
                 Learning Catalog
               </p>
               <h2 className="mt-1 text-3xl font-black text-ink">
-                Approved Educational Games ({filteredGames.length})
+                Educational Games Catalog ({filteredGames.length})
               </h2>
             </div>
 
@@ -103,32 +107,34 @@ export default function GamesPage() {
             </div>
           </div>
 
-          {/* Group Tabs */}
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setSelectedGroup(null)}
-              className={`rounded-xl px-4 py-2 text-sm font-black transition ${
-                selectedGroup === null
-                  ? 'bg-leaf text-white shadow-soft'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              All Groups
-            </button>
-            {groups.map((group) => (
+          {/* Class Level Tabs */}
+          {!isStudent && (
+            <div className="mt-6 flex flex-wrap items-center gap-2">
               <button
-                key={group.key}
-                onClick={() => setSelectedGroup(selectedGroup === group.label ? null : group.label)}
+                onClick={() => setSelectedClass(null)}
                 className={`rounded-xl px-4 py-2 text-sm font-black transition ${
-                  selectedGroup === group.label
+                  selectedClass === null
                     ? 'bg-leaf text-white shadow-soft'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                {group.label} ({group.classes})
+                All Classes
               </button>
-            ))}
-          </div>
+              {classLevelsList.map((cl) => (
+                <button
+                  key={cl.key}
+                  onClick={() => setSelectedClass(selectedClass === cl.key ? null : cl.key)}
+                  className={`rounded-xl px-4 py-2 text-sm font-black transition ${
+                    selectedClass === cl.key
+                      ? 'bg-leaf text-white shadow-soft'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {cl.label}
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Categories Grid */}
@@ -160,7 +166,8 @@ export default function GamesPage() {
         {/* Game Cards Grid */}
         <section className="grid gap-4 lg:grid-cols-2">
           {filteredGames.map((game) => {
-            const unlocked = !isStudent || isGameUnlocked(user.classLevel, game.id);
+            const targetClass = selectedClass || user.classLevel || 'STANDARD_1';
+            const unlocked = !isStudent || isGameUnlocked(targetClass, game.id);
             const statusLabel = unlocked ? 'Unlocked' : 'Locked';
 
             return (
@@ -172,7 +179,7 @@ export default function GamesPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <span className="inline-block rounded-md bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-800">
-                        {game.group} · {game.category}
+                        {game.category}
                       </span>
                       <h3 className="mt-2 text-xl font-black text-ink">{game.title}</h3>
                     </div>
@@ -193,23 +200,24 @@ export default function GamesPage() {
                         : 'bg-emerald-100 text-emerald-800'
                     }`}
                   >
+                    {!unlocked && <IconLock className="size-3.5" />}
                     {statusLabel}
                   </span>
 
-                  {!unlocked ? (
-                    <button
-                      disabled
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-slate-200 px-4 py-2 text-xs font-black text-slate-500 cursor-not-allowed"
-                    >
-                      <IconLock className="size-3.5" /> Locked
-                    </button>
-                  ) : (
-                    <Link
+                  {unlocked ? (
+                    <a
                       href={`/games/${game.id}`}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-leaf px-4 py-2 text-xs font-black text-white shadow-soft transition hover:bg-emerald-600"
                     >
-                      <IconPlay className="size-3.5" /> Play Now
-                    </Link>
+                      <IconPlay className="size-4" /> Play Now
+                    </a>
+                  ) : (
+                    <button
+                      disabled
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-slate-200 px-4 py-2 text-xs font-bold text-slate-400 cursor-not-allowed"
+                    >
+                      <IconLock className="size-4" /> Locked
+                    </button>
                   )}
                 </div>
               </article>
