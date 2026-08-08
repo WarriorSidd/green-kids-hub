@@ -201,6 +201,7 @@ export async function syncWithServer(): Promise<void> {
       }
       if (Array.isArray(data.locks)) {
         setStore(STORAGE_KEYS.GAME_LOCKS, data.locks);
+        window.dispatchEvent(new Event('gkh_lock_change'));
       }
     }
   } catch {
@@ -542,6 +543,7 @@ export async function setGameUnlocked(classLevel: ClassLevel, gameId: string, un
   }
 
   setStore(STORAGE_KEYS.GAME_LOCKS, locks);
+  window.dispatchEvent(new Event('gkh_lock_change'));
 
   // Sync game lock to cloud server
   try {

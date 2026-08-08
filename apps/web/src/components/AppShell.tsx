@@ -94,6 +94,66 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
     { name: 'Leaderboard', href: '/leaderboard', icon: IconAward },
   ];
 
+  const NotificationDropdown = () => (
+    <div className="relative">
+      <button
+        onClick={() => setShowNotifications(!showNotifications)}
+        className="relative p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+        aria-label="Notifications"
+      >
+        <IconBell className="w-5 h-5" />
+        {unreadCount > 0 && (
+          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white animate-pulse">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+
+      {/* Notification Panel Dropdown */}
+      {showNotifications && (
+        <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-slate-200 z-50 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h4 className="font-black text-sm text-ink flex items-center gap-2">
+              <IconBell className="w-4 h-4 text-emerald-600" /> Notifications
+            </h4>
+            <button
+              onClick={() => setShowNotifications(false)}
+              className="text-slate-400 hover:text-slate-600"
+            >
+              <IconClose className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="mt-3 max-h-64 overflow-y-auto space-y-2">
+            {notifications.length === 0 ? (
+              <p className="text-xs font-semibold text-slate-400 text-center py-4">
+                No notifications yet.
+              </p>
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => handleMarkRead(n.id)}
+                  className={`p-3 rounded-xl cursor-pointer text-left transition ${
+                    !n.readAt
+                      ? 'bg-emerald-50 border border-emerald-200'
+                      : 'bg-slate-50 border border-slate-100 opacity-75'
+                  }`}
+                >
+                  <p className="text-xs font-black text-ink">{n.title}</p>
+                  <p className="mt-0.5 text-xs text-slate-600 leading-snug">{n.body}</p>
+                  <p className="mt-1 text-[10px] text-slate-400 font-semibold">
+                    {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <ToastProvider>
       <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-ink">
@@ -124,70 +184,11 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
                 ))}
               </nav>
 
-              {/* User Actions & Notifications */}
+              {/* User Actions & Notifications (Desktop) */}
               <div className="hidden md:flex items-center gap-4">
                 {user ? (
                   <div className="flex items-center gap-3">
-                    {/* Notification Bell */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowNotifications(!showNotifications)}
-                        className="relative p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                        aria-label="Notifications"
-                      >
-                        <IconBell className="w-5 h-5" />
-                        {unreadCount > 0 && (
-                          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white animate-pulse">
-                            {unreadCount}
-                          </span>
-                        )}
-                      </button>
-
-                      {/* Notification Panel Dropdown */}
-                      {showNotifications && (
-                        <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-slate-200 z-50 animate-in fade-in slide-in-from-top-2">
-                          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h4 className="font-black text-sm text-ink flex items-center gap-2">
-                              <IconBell className="w-4 h-4 text-emerald-600" /> Notifications
-                            </h4>
-                            <button
-                              onClick={() => setShowNotifications(false)}
-                              className="text-slate-400 hover:text-slate-600"
-                            >
-                              <IconClose className="w-4 h-4" />
-                            </button>
-                          </div>
-
-                          <div className="mt-3 max-h-64 overflow-y-auto space-y-2">
-                            {notifications.length === 0 ? (
-                              <p className="text-xs font-semibold text-slate-400 text-center py-4">
-                                No notifications yet.
-                              </p>
-                            ) : (
-                              notifications.map((n) => (
-                                <div
-                                  key={n.id}
-                                  onClick={() => handleMarkRead(n.id)}
-                                  className={`p-3 rounded-xl cursor-pointer text-left transition ${
-                                    !n.readAt
-                                      ? 'bg-emerald-50 border border-emerald-200'
-                                      : 'bg-slate-50 border border-slate-100 opacity-75'
-                                  }`}
-                                >
-                                  <p className="text-xs font-black text-ink">{n.title}</p>
-                                  <p className="mt-0.5 text-xs text-slate-600 leading-snug">{n.body}</p>
-                                  <p className="mt-1 text-[10px] text-slate-400 font-semibold">
-                                    {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </p>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* User Profile */}
+                    <NotificationDropdown />
                     <div className="flex flex-col items-end">
                       <span className="text-sm font-semibold text-slate-900">{user.displayName}</span>
                       <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 capitalize">
@@ -219,8 +220,9 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
                 )}
               </div>
 
-              {/* Mobile menu button */}
-              <div className="flex items-center md:hidden">
+              {/* Mobile Actions (Bell + Menu button) */}
+              <div className="flex items-center gap-2 md:hidden">
+                {user && <NotificationDropdown />}
                 <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                   className="p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100"

@@ -14,15 +14,29 @@ export default function GamesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<UserSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [lockVersion, setLockVersion] = useState(0);
 
   useEffect(() => {
     setUser(getStoredUser());
     setIsLoading(false);
 
-    // Sync latest game unlock status from cloud server
-    syncWithServer().then(() => {
+    const handleLockChange = () => {
       setUser(getStoredUser());
+      setLockVersion((v) => v + 1);
+    };
+
+    window.addEventListener('gkh_lock_change', handleLockChange);
+    window.addEventListener('gkh_auth_change', handleLockChange);
+
+    syncWithServer().then(() => {
+      handleLockChange();
     });
+
+    return () => {
+      window.removeEventListener('gkh_lock_change', handleLockChange);
+      window.removeEventListener('gkh_auth_change', handleLockChange);
+    };
   }, []);
 
   if (isLoading) return <AppShell><div className="p-8 font-medium">Loading...</div></AppShell>;
