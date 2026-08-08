@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "start": "next start -p 3000",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test": "echo \"Add Playwright and component tests as screens stabilize\""
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
     "next": "^15.1.0",
@@ -24,6 +26,7 @@
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.0",
     "postcss": "^8.4.49",
+    "prisma": "^6.19.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2"
   }
