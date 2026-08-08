@@ -1,7 +1,25 @@
-import { StoredUser, ScoreEntry, AuditEntry, RoleType, ClassLevel } from './api';
+import { StoredUser, ScoreEntry, AuditEntry, RoleType, ClassLevel, LearningGroup } from './api';
 
 const fallbackNeonUrl =
   'postgresql://neondb_owner:npg_s0EMeJOGf7Ca@ep-ancient-fog-axsv9cf2-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
+
+const CLASS_TO_GROUP_ENUM: Record<ClassLevel, 'GROUP_A' | 'GROUP_B' | 'GROUP_C'> = {
+  SENIOR_KG: 'GROUP_A',
+  STANDARD_1: 'GROUP_A',
+  STANDARD_2: 'GROUP_B',
+  STANDARD_3: 'GROUP_B',
+  STANDARD_4: 'GROUP_C',
+  STANDARD_5: 'GROUP_C'
+};
+
+const CLASS_TO_GROUP_LABEL: Record<ClassLevel, LearningGroup> = {
+  SENIOR_KG: 'Group A',
+  STANDARD_1: 'Group A',
+  STANDARD_2: 'Group B',
+  STANDARD_3: 'Group B',
+  STANDARD_4: 'Group C',
+  STANDARD_5: 'Group C'
+};
 
 const globalForPrisma = globalThis as unknown as {
   prisma: unknown;
@@ -64,18 +82,23 @@ export async function getServerUsersAsync(): Promise<StoredUser[]> {
 
       if (dbUsers && dbUsers.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return dbUsers.map((u: any) => ({
-          id: u.id,
-          email: u.email,
-          displayName: u.displayName,
-          role: u.role.key as RoleType,
-          classLevel: u.studentProfile?.classRoom?.level as ClassLevel | undefined,
-          studentId: u.studentProfile?.id,
-          teacherId: u.teacherProfile?.id,
-          passwordHash: u.passwordHash,
-          isActive: u.isActive,
-          createdAt: u.createdAt.toISOString()
-        }));
+        return dbUsers.map((u: any) => {
+          const cl = (u.studentProfile?.classRoom?.level ||
+            u.teacherProfile?.classes?.[0]?.classRoom?.level) as ClassLevel | undefined;
+          return {
+            id: u.id,
+            email: u.email,
+            displayName: u.displayName,
+            role: u.role.key as RoleType,
+            classLevel: cl,
+            group: cl ? CLASS_TO_GROUP_LABEL[cl] : undefined,
+            studentId: u.studentProfile?.id,
+            teacherId: u.teacherProfile?.id,
+            passwordHash: u.passwordHash,
+            isActive: u.isActive,
+            createdAt: u.createdAt.toISOString()
+          };
+        });
       }
     } catch {
       /* ignore db error */
@@ -94,15 +117,26 @@ export async function addServerUserAsync(user: StoredUser): Promise<void> {
       if (roleRecord) {
         let classRoomId: string | undefined;
         if (user.classLevel) {
-          const classRoom = await db.classRoom.findUnique({ where: { level: user.classLevel } });
-          if (classRoom) classRoomId = classRoom.id;
+          const cr = await db.classRoom.upsert({
+            where: { level: user.classLevel },
+            update: {},
+            create: {
+              level: user.classLevel,
+              group: CLASS_TO_GROUP_ENUM[user.classLevel],
+              label: user.classLevel.replace('_', ' ')
+            }
+          });
+          classRoomId = cr.id;
         }
 
         await db.user.upsert({
           where: { email: user.email },
           update: {
             displayName: user.displayName,
-            isActive: user.isActive
+            isActive: user.isActive,
+            ...(classRoomId && user.role === 'STUDENT'
+              ? { studentProfile: { upsert: { create: { classRoomId }, update: { classRoomId } } } }
+              : {})
           },
           create: {
             email: user.email,
@@ -137,13 +171,16 @@ export async function toggleServerUserActiveAsync(userId: string): Promise<Store
         const updated = await db.user.update({
           where: { id: userId },
           data: { isActive: !user.isActive },
-          include: { role: true }
+          include: { role: true, studentProfile: { include: { classRoom: true } } }
         });
+        const cl = updated.studentProfile?.classRoom?.level as ClassLevel | undefined;
         return {
           id: updated.id,
           email: updated.email,
           displayName: updated.displayName,
           role: updated.role.key as RoleType,
+          classLevel: cl,
+          group: cl ? CLASS_TO_GROUP_LABEL[cl] : undefined,
           passwordHash: updated.passwordHash,
           isActive: updated.isActive,
           createdAt: updated.createdAt.toISOString()
