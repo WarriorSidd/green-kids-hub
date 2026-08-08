@@ -198,6 +198,15 @@ export async function syncWithServer(): Promise<void> {
           }
         });
         setStore(STORAGE_KEYS.USERS, localUsers);
+
+        // Active session security check
+        const currentSession = getStoredUser();
+        if (currentSession) {
+          const updatedCurrentUser = data.users.find((u: StoredUser) => u.id === currentSession.id || u.email.toLowerCase() === currentSession.email.toLowerCase());
+          if (updatedCurrentUser && updatedCurrentUser.isActive === false) {
+            clearStoredUser();
+          }
+        }
       }
       if (Array.isArray(data.locks)) {
         setStore(STORAGE_KEYS.GAME_LOCKS, data.locks);
@@ -222,8 +231,16 @@ export async function authenticateUser(email: string, password: string): Promise
       body: JSON.stringify({ email, password })
     });
 
-    if (res.ok) {
-      const data = await res.json();
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Authentication failed.');
+    }
+
+    if (data.user) {
+      if (data.user.isActive === false) {
+        throw new Error('This account has been deactivated. Contact your administrator.');
+      }
       const session: UserSession = {
         id: data.user.id,
         email: data.user.email,
@@ -242,8 +259,10 @@ export async function authenticateUser(email: string, password: string): Promise
       addAuditEntry(session.id, session.displayName, 'LOGIN', 'User logged in via Cloud API');
       return session;
     }
-  } catch {
-    // API server offline or unreachable — fallback to local database store
+  } catch (err: unknown) {
+    if (err instanceof Error && (err.message.includes('deactivated') || err.message.includes('Incorrect password') || err.message.includes('No account found'))) {
+      throw err;
+    }
   }
 
   // Fallback to local store

@@ -36,11 +36,13 @@ export default function GamePlayPage() {
     );
   }
 
-  if (!user) {
+  if (!user || user.isActive === false) {
     return (
       <AppShell>
         <div className="flex h-full min-h-[50vh] flex-col items-center justify-center rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
-          <p className="text-xl font-black text-ink mb-4">Please log in to play games.</p>
+          <p className="text-xl font-black text-rose-600 mb-4">
+            {user?.isActive === false ? 'Your account has been deactivated. Contact your administrator.' : 'Please log in to play games.'}
+          </p>
         </div>
       </AppShell>
     );
