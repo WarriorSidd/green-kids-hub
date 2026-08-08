@@ -8,18 +8,22 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL || fallbackNeonUrl
-      }
+export function getPrisma(): PrismaClient | null {
+  if (typeof window !== 'undefined') return null;
+  try {
+    if (!globalForPrisma.prisma) {
+      globalForPrisma.prisma = new PrismaClient({
+        datasources: {
+          db: {
+            url: process.env.DATABASE_URL || fallbackNeonUrl
+          }
+        }
+      });
     }
-  });
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
+    return globalForPrisma.prisma;
+  } catch {
+    return null;
+  }
 }
 
 function simpleHash(str: string): string {
@@ -45,71 +49,75 @@ interface ServerState {
 }
 
 export async function getServerUsersAsync(): Promise<StoredUser[]> {
-  try {
-    const dbUsers = await prisma.user.findMany({
-      include: {
-        role: true,
-        studentProfile: { include: { classRoom: true } },
-        teacherProfile: { include: { classes: { include: { classRoom: true } } } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+  const db = getPrisma();
+  if (db) {
+    try {
+      const dbUsers = await db.user.findMany({
+        include: {
+          role: true,
+          studentProfile: { include: { classRoom: true } },
+          teacherProfile: { include: { classes: { include: { classRoom: true } } } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
 
-    if (dbUsers.length > 0) {
-      return dbUsers.map((u) => ({
-        id: u.id,
-        email: u.email,
-        displayName: u.displayName,
-        role: u.role.key as RoleType,
-        classLevel: u.studentProfile?.classRoom?.level as ClassLevel | undefined,
-        studentId: u.studentProfile?.id,
-        teacherId: u.teacherProfile?.id,
-        passwordHash: u.passwordHash,
-        isActive: u.isActive,
-        createdAt: u.createdAt.toISOString()
-      }));
+      if (dbUsers.length > 0) {
+        return dbUsers.map((u) => ({
+          id: u.id,
+          email: u.email,
+          displayName: u.displayName,
+          role: u.role.key as RoleType,
+          classLevel: u.studentProfile?.classRoom?.level as ClassLevel | undefined,
+          studentId: u.studentProfile?.id,
+          teacherId: u.teacherProfile?.id,
+          passwordHash: u.passwordHash,
+          isActive: u.isActive,
+          createdAt: u.createdAt.toISOString()
+        }));
+      }
+    } catch {
+      // Fallback if db offline
     }
-  } catch {
-    // Fallback if db offline
   }
 
   return getFallbackUsers();
 }
 
 export async function addServerUserAsync(user: StoredUser): Promise<void> {
-  try {
-    const roleRecord = await prisma.role.findUnique({ where: { key: user.role as RoleKey } });
-    if (!roleRecord) return;
+  const db = getPrisma();
+  if (db) {
+    try {
+      const roleRecord = await db.role.findUnique({ where: { key: user.role as RoleKey } });
+      if (roleRecord) {
+        let classRoomId: string | undefined;
+        if (user.classLevel) {
+          const classRoom = await db.classRoom.findUnique({ where: { level: user.classLevel as ClassLevel } });
+          if (classRoom) classRoomId = classRoom.id;
+        }
 
-    let classRoomId: string | undefined;
-    if (user.classLevel) {
-      const classRoom = await prisma.classRoom.findUnique({ where: { level: user.classLevel as ClassLevel } });
-      if (classRoom) classRoomId = classRoom.id;
-    }
-
-    const passwordHash = user.passwordHash;
-
-    await prisma.user.upsert({
-      where: { email: user.email },
-      update: {
-        displayName: user.displayName,
-        isActive: user.isActive
-      },
-      create: {
-        email: user.email,
-        displayName: user.displayName,
-        passwordHash,
-        roleId: roleRecord.id,
-        isActive: user.isActive,
-        ...(user.role === 'STUDENT'
-          ? { studentProfile: { create: { classRoomId } } }
-          : user.role === 'TEACHER'
-          ? { teacherProfile: { create: {} } }
-          : {})
+        await db.user.upsert({
+          where: { email: user.email },
+          update: {
+            displayName: user.displayName,
+            isActive: user.isActive
+          },
+          create: {
+            email: user.email,
+            displayName: user.displayName,
+            passwordHash: user.passwordHash,
+            roleId: roleRecord.id,
+            isActive: user.isActive,
+            ...(user.role === 'STUDENT'
+              ? { studentProfile: { create: { classRoomId } } }
+              : user.role === 'TEACHER'
+              ? { teacherProfile: { create: {} } }
+              : {})
+          }
+        });
       }
-    });
-  } catch (err) {
-    console.warn('[Neon DB] User create failed, fallback to local:', err);
+    } catch (err) {
+      console.warn('[Neon DB] User create failed, fallback to local:', err);
+    }
   }
 
   // Update in-memory fallback
@@ -117,24 +125,27 @@ export async function addServerUserAsync(user: StoredUser): Promise<void> {
 }
 
 export async function toggleServerUserActiveAsync(userId: string): Promise<StoredUser | null> {
-  try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (user) {
-      const updated = await prisma.user.update({
-        where: { id: userId },
-        data: { isActive: !user.isActive },
-        include: { role: true }
-      });
-      return {
-        id: updated.id,
-        email: updated.email,
-        displayName: updated.displayName,
-        role: updated.role.key as RoleType,
-        passwordHash: updated.passwordHash,
-        isActive: updated.isActive
-      };
-    }
-  } catch {}
+  const db = getPrisma();
+  if (db) {
+    try {
+      const user = await db.user.findUnique({ where: { id: userId } });
+      if (user) {
+        const updated = await db.user.update({
+          where: { id: userId },
+          data: { isActive: !user.isActive },
+          include: { role: true }
+        });
+        return {
+          id: updated.id,
+          email: updated.email,
+          displayName: updated.displayName,
+          role: updated.role.key as RoleType,
+          passwordHash: updated.passwordHash,
+          isActive: updated.isActive
+        };
+      }
+    } catch {}
+  }
   return toggleFallbackUserActive(userId);
 }
 
