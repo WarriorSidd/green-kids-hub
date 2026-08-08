@@ -54,11 +54,12 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
     const handleAuthChange = () => checkSession();
     window.addEventListener('gkh_auth_change', handleAuthChange);
 
-    // Poll for notifications every 10 seconds for real-time alerts
+    // Poll for notifications every 30 seconds if tab is active
     const interval = setInterval(() => {
+      if (document.hidden) return;
       const u = getStoredUser();
       if (u) fetchNotifications(u.id);
-    }, 10000);
+    }, 30000);
 
     return () => {
       window.removeEventListener('gkh_auth_change', handleAuthChange);

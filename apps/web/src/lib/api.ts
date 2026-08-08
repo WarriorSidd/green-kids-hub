@@ -201,7 +201,6 @@ export async function syncWithServer(): Promise<void> {
       }
       if (Array.isArray(data.locks)) {
         setStore(STORAGE_KEYS.GAME_LOCKS, data.locks);
-        window.dispatchEvent(new Event('gkh_lock_change'));
       }
     }
   } catch {
@@ -527,20 +526,14 @@ interface GameLockEntry {
 }
 
 export function isGameUnlocked(classLevel: ClassLevel | undefined, gameId: string): boolean {
+  if (!classLevel) return false;
   const locks = getStore<GameLockEntry>(STORAGE_KEYS.GAME_LOCKS);
-  
-  if (Array.isArray(locks) && locks.length > 0) {
-    if (classLevel) {
-      const classLocks = locks.filter((l) => l.classLevel === classLevel || (l.classLevel as string) === classLevel);
-      if (classLocks.length > 0) {
-        return classLocks.some((l) => l.gameId === gameId || l.gameId === 'all');
-      }
-    }
-    return locks.some((l) => l.gameId === gameId || l.gameId === 'all');
-  }
-
-  const defaultUnlockedGames = ['game-1', 'game-4', 'game-7', 'game-10'];
-  return defaultUnlockedGames.includes(gameId);
+  if (!Array.isArray(locks)) return false;
+  return locks.some(
+    (l) =>
+      (l.classLevel === classLevel || (l.classLevel as string) === classLevel) &&
+      (l.gameId === gameId || l.gameId === 'all')
+  );
 }
 
 export async function setGameUnlocked(classLevel: ClassLevel, gameId: string, unlocked: boolean, callerRole: RoleType): Promise<void> {
