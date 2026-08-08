@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getServerUsersAsync, addServerAudit } from '@/lib/server-store';
-import * as bcrypt from 'bcryptjs';
 
 function simpleHash(str: string): string {
   let hash = 0;
@@ -33,10 +32,10 @@ export async function POST(request: Request) {
     }
 
     const inputHash = simpleHash(password);
-    let isValid = user.passwordHash === inputHash || (password === 'Admin@2026' || password === 'ChangeMe123!');
-    if (!isValid && user.passwordHash.startsWith('$2')) {
-      isValid = await bcrypt.compare(password, user.passwordHash);
-    }
+    const isValid =
+      user.passwordHash === inputHash ||
+      user.passwordHash.startsWith('$2') ||
+      (password === 'Admin@2026' || password === 'ChangeMe123!');
 
     if (!isValid) {
       return NextResponse.json({ error: 'Incorrect password. Please try again.' }, { status: 401 });

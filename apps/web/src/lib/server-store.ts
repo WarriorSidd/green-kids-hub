@@ -1,6 +1,5 @@
 import { PrismaClient, RoleKey, ClassLevel } from '@prisma/client';
 import { StoredUser, ScoreEntry, AuditEntry, RoleType } from './api';
-import * as bcrypt from 'bcryptjs';
 
 const fallbackNeonUrl =
   'postgresql://neondb_owner:npg_s0EMeJOGf7Ca@ep-ancient-fog-axsv9cf2-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
@@ -88,9 +87,7 @@ export async function addServerUserAsync(user: StoredUser): Promise<void> {
       if (classRoom) classRoomId = classRoom.id;
     }
 
-    const passwordHash = user.passwordHash.startsWith('$2')
-      ? user.passwordHash
-      : await bcrypt.hash('Admin@2026', 12);
+    const passwordHash = user.passwordHash;
 
     await prisma.user.upsert({
       where: { email: user.email },
