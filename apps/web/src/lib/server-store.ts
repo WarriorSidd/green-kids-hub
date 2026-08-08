@@ -138,28 +138,40 @@ export async function addServerUserAsync(user: StoredUser): Promise<void> {
           classRoomId = cr.id;
         }
 
-        await db.user.upsert({
+        const existingUser = await db.user.findUnique({
           where: { email: user.email },
-          update: {
-            displayName: user.displayName,
-            isActive: user.isActive,
-            ...(classRoomId && user.role === 'STUDENT'
-              ? { studentProfile: { upsert: { create: { classRoomId }, update: { classRoomId } } } }
-              : {})
-          },
-          create: {
-            email: user.email,
-            displayName: user.displayName,
-            passwordHash: user.passwordHash,
-            roleId: roleRecord.id,
-            isActive: user.isActive,
-            ...(user.role === 'STUDENT'
-              ? { studentProfile: { create: { classRoomId } } }
-              : user.role === 'TEACHER'
-              ? { teacherProfile: { create: {} } }
-              : {})
-          }
+          include: { studentProfile: true }
         });
+
+        if (existingUser) {
+          await db.user.update({
+            where: { id: existingUser.id },
+            data: {
+              displayName: user.displayName,
+              isActive: user.isActive,
+              ...(classRoomId && user.role === 'STUDENT'
+                ? existingUser.studentProfile
+                  ? { studentProfile: { update: { classRoomId } } }
+                  : { studentProfile: { create: { classRoomId } } }
+                : {})
+            }
+          });
+        } else {
+          await db.user.create({
+            data: {
+              email: user.email,
+              displayName: user.displayName,
+              passwordHash: user.passwordHash,
+              roleId: roleRecord.id,
+              isActive: user.isActive,
+              ...(user.role === 'STUDENT'
+                ? { studentProfile: { create: { classRoomId } } }
+                : user.role === 'TEACHER'
+                ? { teacherProfile: { create: {} } }
+                : {})
+            }
+          });
+        }
       }
     } catch (err) {
       console.warn('[Neon DB] User create failed, fallback to local:', err);

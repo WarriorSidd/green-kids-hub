@@ -230,8 +230,11 @@ export async function authenticateUser(email: string, password: string): Promise
         email: data.user.email,
         displayName: data.user.displayName,
         role: data.user.role as RoleType,
+        classLevel: data.user.classLevel,
+        group: data.user.group || (data.user.classLevel ? CLASS_TO_GROUP[data.user.classLevel as ClassLevel] : undefined),
         studentId: data.user.studentId,
         teacherId: data.user.teacherId,
+        avatar: data.user.avatar,
         token: data.accessToken,
         isActive: true,
         sessionExpiresAt: Date.now() + SESSION_DURATION_MS
@@ -524,9 +527,20 @@ interface GameLockEntry {
 }
 
 export function isGameUnlocked(classLevel: ClassLevel | undefined, gameId: string): boolean {
-  if (!classLevel) return false;
   const locks = getStore<GameLockEntry>(STORAGE_KEYS.GAME_LOCKS);
-  return locks.some((l) => l.classLevel === classLevel && l.gameId === gameId);
+  
+  if (Array.isArray(locks) && locks.length > 0) {
+    if (classLevel) {
+      const classLocks = locks.filter((l) => l.classLevel === classLevel || (l.classLevel as string) === classLevel);
+      if (classLocks.length > 0) {
+        return classLocks.some((l) => l.gameId === gameId || l.gameId === 'all');
+      }
+    }
+    return locks.some((l) => l.gameId === gameId || l.gameId === 'all');
+  }
+
+  const defaultUnlockedGames = ['game-1', 'game-4', 'game-7', 'game-10'];
+  return defaultUnlockedGames.includes(gameId);
 }
 
 export async function setGameUnlocked(classLevel: ClassLevel, gameId: string, unlocked: boolean, callerRole: RoleType): Promise<void> {
