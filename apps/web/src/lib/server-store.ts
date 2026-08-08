@@ -1,17 +1,20 @@
-import { PrismaClient, RoleKey, ClassLevel } from '@prisma/client';
-import { StoredUser, ScoreEntry, AuditEntry, RoleType } from './api';
+import { StoredUser, ScoreEntry, AuditEntry, RoleType, ClassLevel } from './api';
 
 const fallbackNeonUrl =
   'postgresql://neondb_owner:npg_s0EMeJOGf7Ca@ep-ancient-fog-axsv9cf2-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prisma: any;
 };
 
-export function getPrisma(): PrismaClient | null {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getPrisma(): any {
   if (typeof window !== 'undefined') return null;
   try {
     if (!globalForPrisma.prisma) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { PrismaClient } = require('@prisma/client');
       globalForPrisma.prisma = new PrismaClient({
         datasources: {
           db: {
@@ -52,6 +55,7 @@ export async function getServerUsersAsync(): Promise<StoredUser[]> {
   const db = getPrisma();
   if (db) {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dbUsers = await db.user.findMany({
         include: {
           role: true,
@@ -61,8 +65,9 @@ export async function getServerUsersAsync(): Promise<StoredUser[]> {
         orderBy: { createdAt: 'desc' }
       });
 
-      if (dbUsers.length > 0) {
-        return dbUsers.map((u) => ({
+      if (dbUsers && dbUsers.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return dbUsers.map((u: any) => ({
           id: u.id,
           email: u.email,
           displayName: u.displayName,
@@ -87,11 +92,11 @@ export async function addServerUserAsync(user: StoredUser): Promise<void> {
   const db = getPrisma();
   if (db) {
     try {
-      const roleRecord = await db.role.findUnique({ where: { key: user.role as RoleKey } });
+      const roleRecord = await db.role.findUnique({ where: { key: user.role } });
       if (roleRecord) {
         let classRoomId: string | undefined;
         if (user.classLevel) {
-          const classRoom = await db.classRoom.findUnique({ where: { level: user.classLevel as ClassLevel } });
+          const classRoom = await db.classRoom.findUnique({ where: { level: user.classLevel } });
           if (classRoom) classRoomId = classRoom.id;
         }
 
