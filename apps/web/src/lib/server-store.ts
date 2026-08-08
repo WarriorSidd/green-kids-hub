@@ -54,9 +54,18 @@ function simpleHash(str: string): string {
   return 'h_' + Math.abs(hash).toString(36) + '_' + str.length;
 }
 
-interface GameLockEntry {
+export interface GameLockEntry {
   classLevel: ClassLevel;
   gameId: string;
+}
+
+export interface NotificationEntry {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  readAt?: string | null;
+  createdAt: string;
 }
 
 interface ServerState {
@@ -191,6 +200,132 @@ export async function toggleServerUserActiveAsync(userId: string): Promise<Store
     }
   }
   return toggleFallbackUserActive(userId);
+}
+
+// ─── Game Locks Persistence in Neon DB ─────────────────────────────
+
+export async function getServerLocksAsync(): Promise<GameLockEntry[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = getPrisma() as any;
+  if (db) {
+    try {
+      const setting = await db.setting.findUnique({ where: { key: 'game_locks' } });
+      if (setting && Array.isArray(setting.value)) {
+        return setting.value as GameLockEntry[];
+      }
+    } catch {
+      /* ignore db error */
+    }
+  }
+  return fallbackStore.locks;
+}
+
+export async function setServerLockAsync(classLevel: ClassLevel, gameId: string, unlocked: boolean): Promise<void> {
+  // Update in-memory fallback
+  setServerLock(classLevel, gameId, unlocked);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = getPrisma() as any;
+  if (db) {
+    try {
+      const currentLocks = await getServerLocksAsync();
+      let updatedLocks: GameLockEntry[];
+
+      if (unlocked) {
+        if (!currentLocks.some((l) => l.classLevel === classLevel && l.gameId === gameId)) {
+          updatedLocks = [...currentLocks, { classLevel, gameId }];
+        } else {
+          updatedLocks = currentLocks;
+        }
+      } else {
+        updatedLocks = currentLocks.filter((l) => !(l.classLevel === classLevel && l.gameId === gameId));
+      }
+
+      await db.setting.upsert({
+        where: { key: 'game_locks' },
+        update: { value: updatedLocks },
+        create: { key: 'game_locks', value: updatedLocks }
+      });
+
+      if (unlocked) {
+        await createNotificationForClassAsync(classLevel, gameId);
+      }
+    } catch (err) {
+      console.warn('[Neon DB] Lock update failed:', err);
+    }
+  }
+}
+
+// ─── Notifications System ──────────────────────────────────────────
+
+export async function createNotificationForClassAsync(classLevel: ClassLevel, gameId: string): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = getPrisma() as any;
+  if (!db) return;
+
+  try {
+    const classRoom = await db.classRoom.findUnique({
+      where: { level: classLevel },
+      include: { students: { include: { user: true } } }
+    });
+
+    if (classRoom && classRoom.students && classRoom.students.length > 0) {
+      const formattedLevel = classLevel.replace('_', ' ');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const notificationsData = classRoom.students.map((student: any) => ({
+        userId: student.userId,
+        title: '🎮 New Game Unlocked!',
+        body: `A new learning game (${gameId}) has been unlocked for your class (${formattedLevel})!`
+      }));
+
+      await db.notification.createMany({
+        data: notificationsData
+      });
+    }
+  } catch (err) {
+    console.warn('[Neon DB] Notification creation failed:', err);
+  }
+}
+
+export async function getNotificationsForUserAsync(userId: string): Promise<NotificationEntry[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = getPrisma() as any;
+  if (db) {
+    try {
+      const dbNotifications = await db.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 20
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return dbNotifications.map((n: any) => ({
+        id: n.id,
+        userId: n.userId,
+        title: n.title,
+        body: n.body,
+        readAt: n.readAt ? n.readAt.toISOString() : null,
+        createdAt: n.createdAt.toISOString()
+      }));
+    } catch {
+      /* ignore db error */
+    }
+  }
+  return [];
+}
+
+export async function markNotificationReadAsync(notificationId: string): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = getPrisma() as any;
+  if (db) {
+    try {
+      await db.notification.update({
+        where: { id: notificationId },
+        data: { readAt: new Date() }
+      });
+    } catch {
+      /* ignore db error */
+    }
+  }
 }
 
 // ─── In-Memory Fallback State ─────────────────────────────────────

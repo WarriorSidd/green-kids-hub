@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getServerLocks, setServerLock, addServerAudit } from '@/lib/server-store';
+import { getServerLocksAsync, setServerLockAsync, addServerAudit } from '@/lib/server-store';
 import { ClassLevel } from '@/lib/api';
 
 export async function GET() {
-  const locks = getServerLocks();
+  const locks = await getServerLocksAsync();
   return NextResponse.json(locks);
 }
 
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { classLevel, gameId, unlocked } = body;
 
-    setServerLock(classLevel as ClassLevel, gameId, unlocked);
+    await setServerLockAsync(classLevel as ClassLevel, gameId, unlocked);
     addServerAudit(
       'server',
       'Teacher/Admin',
