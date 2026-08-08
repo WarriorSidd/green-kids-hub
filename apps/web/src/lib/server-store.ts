@@ -146,7 +146,8 @@ export async function toggleServerUserActiveAsync(userId: string): Promise<Store
           displayName: updated.displayName,
           role: updated.role.key as RoleType,
           passwordHash: updated.passwordHash,
-          isActive: updated.isActive
+          isActive: updated.isActive,
+          createdAt: updated.createdAt.toISOString()
         };
       }
     } catch {}
